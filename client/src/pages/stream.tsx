@@ -195,7 +195,7 @@ export default function Stream() {
             data-testid="iframe-youtube-stream"
             width="100%"
             height="100%"
-            src={youtubeUrl}
+            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
