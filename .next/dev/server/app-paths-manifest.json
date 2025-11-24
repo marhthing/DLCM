@@ -1,7 +1,5 @@
 {
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/login/page": "app/admin/login/page.js",
-  "/api/admin/login/route": "app/api/admin/login/route.js",
   "/api/attendance/records/route": "app/api/attendance/records/route.js",
   "/api/stream/settings/route": "app/api/stream/settings/route.js",
   "/page": "app/page.js"
