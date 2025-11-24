@@ -4,8 +4,8 @@ import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertSt
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
 
-const SUPABASE_URL = "https://ubkfowniejcaxrmgsujh.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVia2Zvd25pZWpjYXhybWdzdWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMTg2NzAsImV4cCI6MjA3ODY5NDY3MH0.MG0rNqksB0NX8cqleP_AGorB04c-2REjVyfO_O-FHiw";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://ubkfowniejcaxrmgsujh.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVia2Zvd25pZWpjYXhybWdzdWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMTg2NzAsImV4cCI6MjA3ODY5NDY3MH0.MG0rNqksB0NX8cqleP_AGorB04c-2REjVyfO_O-FHiw";
 
 export class SupabaseStorage implements IStorage {
   private supabase: SupabaseClient;
