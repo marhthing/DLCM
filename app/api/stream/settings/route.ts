@@ -1,8 +1,8 @@
 
 import { NextResponse } from 'next/server'
-import { GoogleSheetsStorage } from '@/lib/google-sheets-storage'
+import { SupabaseStorage } from '@/lib/supabase-storage'
 
-const storage = new GoogleSheetsStorage()
+const storage = new SupabaseStorage()
 
 export async function GET() {
   try {
