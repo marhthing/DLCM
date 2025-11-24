@@ -102,7 +102,9 @@ export default function StreamPage() {
       setUser(updatedUser)
       localStorage.setItem('churchUser', JSON.stringify(updatedUser))
     } else {
+      // Resuming existing session - use the original start time from localStorage
       currentStartTimeRef.current = user.startTime
+      setElapsedSeconds(Math.floor((Date.now() - user.startTime) / 1000))
     }
 
     heartbeatIntervalRef.current = setInterval(() => {
