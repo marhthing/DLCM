@@ -5,7 +5,7 @@ export interface IStorage {
   // Attendance Records
   getAttendanceRecords(): Promise<AttendanceRecord[]>;
   createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
-  
+
   // Stream Settings
   getStreamSettings(): Promise<StreamSettings | undefined>;
   updateStreamSettings(settings: InsertStreamSettings): Promise<StreamSettings>;
@@ -55,4 +55,6 @@ export class MemStorage implements IStorage {
 
 import { SupabaseStorage } from "./supabase-storage";
 
+// Using Supabase storage
+// Make sure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY are set in Secrets
 export const storage = new SupabaseStorage();

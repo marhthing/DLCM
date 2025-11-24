@@ -4,10 +4,14 @@ import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertSt
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY || SUPABASE_URL.trim() === '' || SUPABASE_SERVICE_KEY.trim() === '') {
+  console.error('❌ Missing Supabase environment variables!');
+  console.error('Please add these secrets in the Secrets tool:');
+  console.error('  - NEXT_PUBLIC_SUPABASE_URL: Your Supabase project URL (e.g., https://xxxxx.supabase.co)');
+  console.error('  - SUPABASE_SERVICE_KEY: Your Supabase service role key');
   throw new Error('Missing required Supabase environment variables. Please add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY to your secrets.');
 }
 
