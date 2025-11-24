@@ -133,7 +133,8 @@ export default function AdminDashboard() {
     doc.text(`Generated on: ${format(new Date(), 'MMM dd, yyyy h:mm a')}`, 14, 35)
     
     // Prepare table data
-    const tableData = recordsToExport.map(record => [
+    const tableData = recordsToExport.map((record, index) => [
+      (index + 1).toString(),
       record.name,
       record.email,
       record.streamTitle,
@@ -142,7 +143,7 @@ export default function AdminDashboard() {
     
     // Add table
     autoTable(doc, {
-      head: [['Name', 'Email', 'Service', 'Date']],
+      head: [['S/N', 'Name', 'Email', 'Service', 'Date']],
       body: tableData,
       startY: 42,
       styles: { fontSize: 9 },
@@ -291,6 +292,7 @@ export default function AdminDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-16">S/N</TableHead>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Service</TableHead>
@@ -300,8 +302,9 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedRecords.map((record) => (
+                      {paginatedRecords.map((record, index) => (
                         <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
+                          <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                           <TableCell className="font-medium">{record.name}</TableCell>
                           <TableCell>{record.email}</TableCell>
                           <TableCell className="font-medium">{record.streamTitle}</TableCell>
