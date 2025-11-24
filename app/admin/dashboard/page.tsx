@@ -138,7 +138,7 @@ export default function AdminDashboard() {
           </div>
           <Button
             data-testid="button-logout"
-            variant="link"
+            variant="ghost"
             onClick={handleLogout}
           >
             Logout
