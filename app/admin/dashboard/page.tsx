@@ -123,13 +123,11 @@ export default function AdminDashboard() {
       record.email,
       record.streamTitle,
       format(new Date(record.startTime), 'MMM dd, yyyy'),
-      format(new Date(record.startTime), 'h:mm a'),
-      Math.round(record.durationSeconds / 60).toString(),
     ])
     
     // Add table
     autoTable(doc, {
-      head: [['Name', 'Email', 'Service', 'Date', 'Start Time', 'Duration (min)']],
+      head: [['Name', 'Email', 'Service', 'Date']],
       body: tableData,
       startY: 42,
       styles: { fontSize: 9 },
