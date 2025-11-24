@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertAttendanceRecordSchema, youtubeUrlUpdateSchema, adminLoginSchema } from "@shared/schema";
+import { insertAttendanceRecordSchema, heartbeatAttendanceSchema, youtubeUrlUpdateSchema, adminLoginSchema } from "@shared/schema";
 
 const ADMIN_PASSWORD = "admin123";
 
@@ -55,6 +55,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const record = await storage.createAttendanceRecord(result.data);
       res.json(record);
     } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Heartbeat for updating attendance
+  app.post("/api/attendance/heartbeat", async (req, res) => {
+    try {
+      const result = heartbeatAttendanceSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid request", errors: result.error.errors });
+      }
+
+      const { email, streamSessionId, name, startTime, durationSeconds } = result.data;
+      const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
+        name,
+        startTime,
+        durationSeconds,
+      });
+
+      res.json(record);
+    } catch (error) {
+      console.error('Heartbeat error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });

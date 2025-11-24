@@ -100,12 +100,76 @@ export class GoogleSheetsStorage implements IStorage {
         // Add headers
         await sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${this.attendanceSheetName}!A1:G1`,
+          range: `${this.attendanceSheetName}!A1:I1`,
           valueInputOption: 'RAW',
           requestBody: {
-            values: [['ID', 'Name', 'Email', 'Start Time', 'End Time', 'Duration (seconds)', 'Timestamp']],
+            values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
           },
         });
+      } else {
+        // Check if we need to migrate from old schema (7 columns) to new schema (9 columns)
+        const headerResponse = await sheets.spreadsheets.values.get({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.attendanceSheetName}!A1:I1`,
+        });
+
+        const headers = headerResponse.data.values?.[0] || [];
+        
+        // If we have old 7-column format, migrate to new 9-column format
+        if (headers.length === 7 && !headers.includes('Stream Session ID')) {
+          console.log('Migrating Attendance Records sheet from old schema to new schema...');
+          
+          // Update headers
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.attendanceSheetName}!A1:I1`,
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
+            },
+          });
+
+          // Get all existing data rows
+          const dataResponse = await sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.attendanceSheetName}!A2:G`,
+          });
+
+          const oldRows = dataResponse.data.values || [];
+          
+          if (oldRows.length > 0) {
+            // Migrate each row: backfill streamSessionId with a unique identifier to prevent collisions
+            const migratedRows = oldRows.map((row, index) => {
+              // Use row ID if available, otherwise use row index for truly unique legacy session ID
+              const rowId = row[0] || `row${index}`;
+              const legacySessionId = `legacy-${rowId}`;
+              
+              return [
+                row[0] || '', // ID
+                row[1] || '', // Name
+                row[2] || '', // Email
+                legacySessionId, // Stream Session ID (backfilled with unique legacy placeholder)
+                row[3] || '', // Start Time
+                row[4] || '', // End Time
+                row[4] || new Date().toISOString(), // Last Seen At (use endTime or now)
+                row[5] || '0', // Duration (seconds)
+                row[6] || '', // Timestamp
+              ];
+            });
+
+            // Write migrated data back
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: this.spreadsheetId,
+              range: `${this.attendanceSheetName}!A2:I${oldRows.length + 1}`,
+              valueInputOption: 'RAW',
+              requestBody: {
+                values: migratedRows,
+              },
+            });
+
+            console.log(`Migrated ${oldRows.length} attendance records to new schema.`);
+          }
+        }
       }
 
       // Create Stream Settings sheet if it doesn't exist
@@ -147,7 +211,7 @@ export class GoogleSheetsStorage implements IStorage {
       
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:G`,
+        range: `${this.attendanceSheetName}!A2:I`,
       });
 
       const rows = response.data.values || [];
@@ -156,10 +220,12 @@ export class GoogleSheetsStorage implements IStorage {
         id: row[0] || '',
         name: row[1] || '',
         email: row[2] || '',
-        startTime: row[3] || '',
-        endTime: row[4] || '',
-        durationSeconds: parseInt(row[5] || '0', 10),
-        timestamp: row[6] || '',
+        streamSessionId: row[3] || '',
+        startTime: row[4] || '',
+        endTime: row[5] || '',
+        lastSeenAt: row[6] || '',
+        durationSeconds: parseInt(row[7] || '0', 10),
+        timestamp: row[8] || '',
       })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } catch (error) {
       console.error('Error fetching attendance records:', error);
@@ -171,13 +237,16 @@ export class GoogleSheetsStorage implements IStorage {
     await this.initPromise;
     const id = randomUUID();
     const timestamp = new Date().toISOString();
+    const lastSeenAt = insertRecord.endTime || new Date().toISOString();
     
     const record: AttendanceRecord = {
       id,
       name: insertRecord.name,
       email: insertRecord.email,
+      streamSessionId: insertRecord.streamSessionId,
       startTime: insertRecord.startTime,
       endTime: insertRecord.endTime,
+      lastSeenAt,
       durationSeconds: insertRecord.durationSeconds,
       timestamp,
     };
@@ -187,15 +256,17 @@ export class GoogleSheetsStorage implements IStorage {
       
       await sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:G`,
+        range: `${this.attendanceSheetName}!A2:I`,
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
             record.id,
             record.name,
             record.email,
+            record.streamSessionId,
             record.startTime,
             record.endTime || '',
+            record.lastSeenAt,
             record.durationSeconds,
             record.timestamp,
           ]],
@@ -206,6 +277,120 @@ export class GoogleSheetsStorage implements IStorage {
     } catch (error) {
       console.error('Error creating attendance record:', error);
       throw new Error('Failed to create attendance record');
+    }
+  }
+
+  async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
+    await this.initPromise;
+    
+    try {
+      const sheets = await getUncachableGoogleSheetClient();
+      
+      // Fetch all records to find existing one
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.attendanceSheetName}!A2:I`,
+      });
+
+      const rows = response.data.values || [];
+      let existingRowIndex = -1;
+      let existingRecord: AttendanceRecord | null = null;
+
+      // Find existing record by email + streamSessionId
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (row[2] === email && row[3] === streamSessionId) {
+          existingRowIndex = i + 2; // +2 because sheet rows are 1-indexed and we start from row 2
+          existingRecord = {
+            id: row[0] || '',
+            name: row[1] || '',
+            email: row[2] || '',
+            streamSessionId: row[3] || '',
+            startTime: row[4] || '',
+            endTime: row[5] || '',
+            lastSeenAt: row[6] || '',
+            durationSeconds: parseInt(row[7] || '0', 10),
+            timestamp: row[8] || '',
+          };
+          break;
+        }
+      }
+
+      // No legacy fallback - only match by exact streamSessionId
+      // Legacy records are preserved as historical data with their own unique streamSessionId
+
+      if (existingRecord && existingRowIndex > 0) {
+        // Update existing record
+        const lastSeenAt = new Date().toISOString();
+        const updated: AttendanceRecord = {
+          ...existingRecord,
+          name: data.name,
+          durationSeconds: data.durationSeconds,
+          lastSeenAt,
+        };
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${this.attendanceSheetName}!A${existingRowIndex}:I${existingRowIndex}`,
+          valueInputOption: 'RAW',
+          requestBody: {
+            values: [[
+              updated.id,
+              updated.name,
+              updated.email,
+              updated.streamSessionId,
+              updated.startTime,
+              updated.endTime || '',
+              updated.lastSeenAt,
+              updated.durationSeconds,
+              updated.timestamp,
+            ]],
+          },
+        });
+
+        return updated;
+      }
+
+      // Create new record
+      const id = randomUUID();
+      const timestamp = new Date().toISOString();
+      const lastSeenAt = new Date().toISOString();
+
+      const record: AttendanceRecord = {
+        id,
+        name: data.name,
+        email,
+        streamSessionId,
+        startTime: data.startTime,
+        endTime: undefined,
+        lastSeenAt,
+        durationSeconds: data.durationSeconds,
+        timestamp,
+      };
+
+      await sheets.spreadsheets.values.append({
+        spreadsheetId: this.spreadsheetId,
+        range: `${this.attendanceSheetName}!A2:I`,
+        valueInputOption: 'RAW',
+        requestBody: {
+          values: [[
+            record.id,
+            record.name,
+            record.email,
+            record.streamSessionId,
+            record.startTime,
+            record.endTime || '',
+            record.lastSeenAt,
+            record.durationSeconds,
+            record.timestamp,
+          ]],
+        },
+      });
+
+      return record;
+    } catch (error) {
+      console.error('Error upserting attendance record:', error);
+      throw new Error('Failed to upsert attendance record');
     }
   }
 

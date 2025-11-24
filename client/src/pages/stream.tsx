@@ -1,16 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle, Timer } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { StreamSettings } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiRequest } from "@/lib/queryClient";
+import { format } from "date-fns";
 
 export default function Stream() {
   const [, setLocation] = useLocation();
-  const [user, setUser] = useState<{ name: string; email: string; startTime: number } | null>(null);
-  const attendanceRecordedRef = useRef(false);
+  const [user, setUser] = useState<{ name: string; email: string; startTime: number; lastStreamSessionId?: string } | null>(null);
   const [isStreamLive, setIsStreamLive] = useState<boolean>(false);
   const [checkingLiveStatus, setCheckingLiveStatus] = useState<boolean>(true);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const streamSessionIdRef = useRef<string>("");
+  const currentStartTimeRef = useRef<number>(0); // Track the actual start time for current session
 
   useEffect(() => {
     const storedUser = localStorage.getItem("churchUser");
@@ -82,45 +88,176 @@ export default function Stream() {
     return null;
   };
 
-  const recordAttendance = (userData: { name: string; email: string; startTime: number }) => {
-    // Don't record if stream is not live or if already recorded
-    if (attendanceRecordedRef.current || !isStreamLive) return;
-    attendanceRecordedRef.current = true;
-
-    const duration = Math.floor((Date.now() - userData.startTime) / 1000);
-    const data = {
-      name: userData.name,
-      email: userData.email,
-      startTime: new Date(userData.startTime).toISOString(),
-      endTime: new Date().toISOString(),
-      durationSeconds: duration,
-    };
-
-    // Use sendBeacon for reliable data sending
-    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-    navigator.sendBeacon("/api/attendance/record", blob);
-    
-    localStorage.removeItem("churchUser");
+  // Generate stream session ID from video ID + date
+  const generateStreamSessionId = (videoId: string): string => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    return `${videoId}_${today}`;
   };
 
-  // Handle both beforeunload and component unmount
+  // Send heartbeat to update attendance with explicit parameters to avoid closure issues
+  const sendHeartbeat = async (params?: { name: string; email: string; streamSessionId: string; startTime: number }) => {
+    if (!isStreamLive) return;
+
+    // Use provided params or fallback to current values
+    const name = params?.name || user?.name;
+    const email = params?.email || user?.email;
+    const sessionId = params?.streamSessionId || streamSessionIdRef.current;
+    const startTime = params?.startTime || currentStartTimeRef.current || user?.startTime || Date.now();
+
+    if (!name || !email || !sessionId) {
+      console.warn('Heartbeat skipped - missing required data');
+      return;
+    }
+
+    const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+    
+    try {
+      await apiRequest("/api/attendance/heartbeat", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          email,
+          streamSessionId: sessionId,
+          startTime: new Date(startTime).toISOString(),
+          durationSeconds,
+        }),
+      });
+      console.log(`Heartbeat sent successfully - startTime: ${new Date(startTime).toISOString()}, duration: ${durationSeconds}s`);
+    } catch (error) {
+      console.error('Failed to send heartbeat:', error);
+    }
+  };
+
+  // Set up heartbeat system and timer
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStreamLive || !streamSettings?.youtubeUrl) return;
 
-    // Handle beforeunload (tab close, browser close, refresh)
-    const handleBeforeUnload = () => {
-      recordAttendance(user);
+    // Generate stream session ID
+    const videoId = extractVideoId(streamSettings.youtubeUrl);
+    if (!videoId) return;
+
+    const newStreamSessionId = generateStreamSessionId(videoId);
+    
+    // Check if this is a new stream session
+    const isNewSession = !streamSessionIdRef.current || 
+                         streamSessionIdRef.current !== newStreamSessionId || 
+                         (user.lastStreamSessionId && user.lastStreamSessionId !== newStreamSessionId);
+    
+    let sessionStartTime: number;
+    const heartbeatParams = {
+      name: user.name,
+      email: user.email,
+      streamSessionId: newStreamSessionId,
+      startTime: 0, // Will be set below
     };
+    
+    if (isNewSession) {
+      // New stream detected - reset startTime to now
+      const now = Date.now();
+      sessionStartTime = now;
+      currentStartTimeRef.current = now;
+      heartbeatParams.startTime = now;
+      const updatedUser = { ...user, startTime: now, lastStreamSessionId: newStreamSessionId };
+      setUser(updatedUser);
+      localStorage.setItem("churchUser", JSON.stringify(updatedUser));
+      console.log(`New stream session detected (${newStreamSessionId}), reset startTime to ${new Date(now).toISOString()}`);
+    } else {
+      // Same session, use existing startTime
+      sessionStartTime = user.startTime;
+      currentStartTimeRef.current = user.startTime;
+      heartbeatParams.startTime = user.startTime;
+    }
+    
+    streamSessionIdRef.current = newStreamSessionId;
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    // Send initial heartbeat immediately with explicit parameters (before any async operations)
+    sendHeartbeat(heartbeatParams);
 
-    // Cleanup function runs when component unmounts (SPA navigation or any other reason)
+    // Update elapsed time every second
+    timerIntervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - currentStartTimeRef.current) / 1000);
+      setElapsedSeconds(elapsed);
+    }, 1000);
+
+    // Send heartbeat every 30 seconds
+    heartbeatIntervalRef.current = setInterval(() => {
+      sendHeartbeat(); // Uses current refs, not closure
+    }, 30000);
+
+    // Cleanup function
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      // Record attendance when navigating away or unmounting
-      recordAttendance(user);
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+      }
     };
-  }, [user]);
+  }, [user, isStreamLive, streamSettings?.youtubeUrl]);
+
+  // Send final heartbeat with sendBeacon for reliability
+  const sendFinalHeartbeat = () => {
+    if (!user || !isStreamLive || !streamSessionIdRef.current) return;
+
+    // Use the current session's actual start time from ref
+    const startTime = currentStartTimeRef.current || user.startTime || Date.now();
+    const durationSeconds = Math.floor((Date.now() - startTime) / 1000);
+    const data = {
+      name: user.name,
+      email: user.email,
+      streamSessionId: streamSessionIdRef.current,
+      startTime: new Date(startTime).toISOString(),
+      durationSeconds,
+    };
+
+    // Use sendBeacon for reliable data sending on page unload
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    navigator.sendBeacon("/api/attendance/heartbeat", blob);
+  };
+
+  // Handle visibility change and page unload
+  useEffect(() => {
+    if (!user || !isStreamLive) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden, send final heartbeat
+        sendFinalHeartbeat();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      // Send final heartbeat using sendBeacon
+      sendFinalHeartbeat();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+      // Send final heartbeat when component unmounts
+      sendFinalHeartbeat();
+    };
+  }, [user, isStreamLive, streamSettings?.youtubeUrl]);
+
+  // Format time helper
+  const formatDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
 
   if (!user) return null;
 
@@ -170,20 +307,39 @@ export default function Stream() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Clock size={20} data-testid="icon-attendance-clock" />
-            {checkingLiveStatus ? (
-              <span className="text-sm text-gray-400" data-testid="text-checking-status">
-                Checking stream status...
-              </span>
-            ) : isStreamLive ? (
-              <span className="text-sm text-green-400" data-testid="text-attendance-status">
-                Attendance being recorded
-              </span>
-            ) : (
-              <span className="text-sm text-yellow-400" data-testid="text-stream-offline">
-                Stream offline - Attendance not recorded
-              </span>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <Clock size={20} className="text-blue-400" data-testid="icon-attendance-clock" />
+              {checkingLiveStatus ? (
+                <span className="text-sm text-gray-400" data-testid="text-checking-status">
+                  Checking stream status...
+                </span>
+              ) : isStreamLive ? (
+                <span className="text-sm text-green-400" data-testid="text-attendance-status">
+                  Attendance being recorded
+                </span>
+              ) : (
+                <span className="text-sm text-yellow-400" data-testid="text-stream-offline">
+                  Stream offline - Attendance not recorded
+                </span>
+              )}
+            </div>
+            {isStreamLive && (
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+                <div className="flex items-center gap-1" data-testid="container-start-time">
+                  <span className="text-gray-500">Started:</span>
+                  <span className="font-medium" data-testid="text-start-time">
+                    {format(user.startTime, 'h:mm a')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1" data-testid="container-duration">
+                  <Timer size={16} className="text-blue-400" />
+                  <span className="text-gray-500">Watching:</span>
+                  <span className="font-medium text-blue-400" data-testid="text-duration">
+                    {formatDuration(elapsedSeconds)}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>
