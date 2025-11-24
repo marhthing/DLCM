@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer } from 'lucide-react'
+import { Clock, Users, Timer, User } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
 
@@ -31,7 +31,6 @@ export default function StreamPage() {
     const parsedUser = JSON.parse(storedUser)
     setUser(parsedUser)
     
-    // Fetch stream settings
     fetch('/api/stream/settings')
       .then(res => res.json())
       .then(data => {
@@ -86,11 +85,9 @@ export default function StreamPage() {
     const sessionId = generateStreamSessionId(videoId, streamTitle)
     streamSessionIdRef.current = sessionId
 
-    // Check if this is a new session
     const isNewSession = !user.lastStreamSessionId || user.lastStreamSessionId !== sessionId
     
     if (isNewSession) {
-      // New session - reset start time
       const newStartTime = Date.now()
       currentStartTimeRef.current = newStartTime
       
@@ -102,24 +99,19 @@ export default function StreamPage() {
       setUser(updatedUser)
       localStorage.setItem('churchUser', JSON.stringify(updatedUser))
     } else {
-      // Continuing same session - use existing start time
       currentStartTimeRef.current = user.startTime
     }
 
-    // Start heartbeat interval (30 seconds)
     heartbeatIntervalRef.current = setInterval(() => {
       sendHeartbeat()
     }, 30000)
 
-    // Initial heartbeat
     sendHeartbeat()
 
-    // Start timer
     timerIntervalRef.current = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
     }, 1000)
 
-    // Fetch active viewers count
     const fetchActiveViewers = () => {
       fetch('/api/attendance/active-count')
         .then(res => res.json())
@@ -129,13 +121,11 @@ export default function StreamPage() {
     fetchActiveViewers()
     activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 10000)
 
-    // Cleanup on unmount
     return () => {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
       if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
       
-      // Send final heartbeat using sendBeacon
       sendFinalHeartbeat()
     }
   }, [streamSettings, user, streamTitle])
@@ -177,13 +167,11 @@ export default function StreamPage() {
       durationSeconds,
     })
 
-    // Use sendBeacon for reliability on page unload
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/attendance/heartbeat', payload)
     }
   }
 
-  // Listen for page unload events
   useEffect(() => {
     const handleBeforeUnload = () => {
       sendFinalHeartbeat()
@@ -210,7 +198,7 @@ export default function StreamPage() {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
     const secs = seconds % 60
-    if (hours > 0) return `${hours}h ${minutes}m ${secs}s`
+    if (hours > 0) return `${hours}h ${minutes}m`
     if (minutes > 0) return `${minutes}m ${secs}s`
     return `${secs}s`
   }
@@ -218,74 +206,51 @@ export default function StreamPage() {
   if (!user || !streamSettings) return null
 
   return (
-    <div className="min-h-screen bg-gray-900">
-      <div className="bg-gray-800 border-b border-gray-700 px-3 sm:px-6 py-3 sm:py-4">
-        <div className="max-w-7xl mx-auto space-y-3">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 pb-3 border-b border-gray-700">
-            <img 
-              src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
-              alt="Logo" 
-              className="h-10 w-10 sm:h-16 sm:w-16"
-            />
-            <div className="text-center">
-              <h1 className="text-base sm:text-xl font-bold text-white">Deeper Life Bible Church</h1>
-              <p className="text-xs sm:text-base text-gray-300">Pontypridd Region</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+      {/* Compact Header */}
+      <div className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo & Title */}
+            <div className="flex items-center gap-2 min-w-0">
+              <img 
+                src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
+                alt="Logo" 
+                className="h-8 w-8 flex-shrink-0"
+              />
+              <div className="min-w-0 hidden sm:block">
+                <h1 className="text-xs font-semibold text-white truncate">DLBC Pontypridd</h1>
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="bg-gray-700 border-gray-600">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
-                  <div>
-                    <p className="text-xs text-gray-400">Started</p>
-                    <p className="text-sm sm:text-base font-semibold text-white">
-                      {format(new Date(currentStartTimeRef.current), 'h:mm a')}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-700 border-gray-600">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
-                  <div>
-                    <p className="text-xs text-gray-400">Duration</p>
-                    <p className="text-sm sm:text-base font-semibold text-white">
-                      {formatDuration(elapsedSeconds)}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-700 border-gray-600">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
-                  <div>
-                    <p className="text-xs text-gray-400">Watching Now</p>
-                    <p className="text-sm sm:text-base font-semibold text-white">
-                      {activeViewersCount} {activeViewersCount === 1 ? 'viewer' : 'viewers'}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Stats - Compact */}
+            <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md">
+                <Clock className="h-3 w-3" />
+                <span className="hidden sm:inline">{format(new Date(currentStartTimeRef.current), 'h:mm a')}</span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
+                <Timer className="h-3 w-3" />
+                <span>{formatDuration(elapsedSeconds)}</span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
+                <Users className="h-3 w-3" />
+                <span>{activeViewersCount}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="aspect-video bg-black rounded overflow-hidden shadow-2xl relative">
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto p-2 sm:p-4 space-y-3">
+        {/* Video Player */}
+        <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl relative">
           {iframeLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-blue-500 border-r-transparent"></div>
-                <p className="mt-4 text-white">Loading stream...</p>
+                <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-r-transparent"></div>
+                <p className="mt-2 text-sm text-white">Loading...</p>
               </div>
             </div>
           )}
@@ -301,21 +266,39 @@ export default function StreamPage() {
           />
         </div>
 
-        <Card className="mt-4 bg-gray-800 border-gray-700">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-400">Viewing as</p>
-                <p className="text-lg font-semibold text-white">{user.name}</p>
-                <p className="text-sm text-gray-400">{user.email}</p>
+        {/* Info Cards - Responsive Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+          {/* User Info */}
+          <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-400 mb-0.5">Viewing as</p>
+                  <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Session</p>
-                <p className="text-lg font-semibold text-white">{streamTitle}</p>
+            </CardContent>
+          </Card>
+
+          {/* Stream Info */}
+          <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
+                  <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-gray-400 mb-0.5">Now Playing</p>
+                  <p className="text-sm font-semibold text-white line-clamp-2">{streamTitle}</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
