@@ -20,22 +20,39 @@ async function getAccessToken() {
     throw new Error('X_REPLIT_TOKEN not found for repl/depl');
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-sheet',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
+  try {
+    const response = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-sheet',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X_REPLIT_TOKEN': xReplitToken
+        }
       }
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch connection settings: ${response.status}`);
     }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+    
+    const data = await response.json();
+    connectionSettings = data.items?.[0];
 
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
+    if (!connectionSettings || !connectionSettings.settings) {
+      throw new Error('Google Sheet connector not found. Please connect Google Sheets in the Replit Secrets/Tools panel.');
+    }
 
-  if (!connectionSettings || !accessToken) {
-    throw new Error('Google Sheet not connected');
+    const accessToken = connectionSettings.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
+
+    if (!accessToken) {
+      throw new Error('Google Sheet access token not found. Please reconnect Google Sheets.');
+    }
+    
+    return accessToken;
+  } catch (error) {
+    console.error('Failed to get Google Sheets access token:', error);
+    throw error;
   }
-  return accessToken;
 }
 
 async function getUncachableGoogleSheetClient() {
