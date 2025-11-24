@@ -125,10 +125,9 @@ export default function AdminDashboard() {
 
     const doc = new jsPDF()
 
-    // Load and add church logo
-    const logoUrl = 'https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png'
+    // Load and add church logo from local assets
+    const logoUrl = '/attached_assets/DLCM_1764013146463.jpg'
     const img = new Image()
-    img.crossOrigin = 'anonymous'
     img.src = logoUrl
 
     img.onload = () => {
@@ -137,7 +136,7 @@ export default function AdminDashboard() {
       doc.rect(0, 0, 210, 45, 'F')
 
       // Add logo
-      doc.addImage(img, 'PNG', 14, 8, 30, 30)
+      doc.addImage(img, 'JPEG', 14, 8, 30, 30)
 
       // Add church name and title in white
       doc.setTextColor(255, 255, 255)
@@ -175,14 +174,15 @@ export default function AdminDashboard() {
         format(new Date(record.startTime), 'MMM dd, yyyy'),
       ])
 
-      // Add table
+      // Add table with wider columns for better page fit
       autoTable(doc, {
         head: [['S/N', 'Name', 'Service', 'Date']],
         body: tableData,
         startY: 65,
+        tableWidth: 'auto',
         styles: { 
-          fontSize: 9,
-          cellPadding: 3,
+          fontSize: 10,
+          cellPadding: 4,
         },
         headStyles: { 
           fillColor: [13, 71, 161], // Match header color
@@ -194,10 +194,10 @@ export default function AdminDashboard() {
           fillColor: [245, 245, 245],
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 15 },
-          1: { cellWidth: 40 },
-          2: { cellWidth: 50 },
-          3: { halign: 'center', cellWidth: 30 },
+          0: { halign: 'center', cellWidth: 20 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 60 },
+          3: { halign: 'center', cellWidth: 35 },
         },
       })
 
@@ -264,9 +264,10 @@ export default function AdminDashboard() {
         head: [['S/N', 'Name', 'Service', 'Date']],
         body: tableData,
         startY: 65,
+        tableWidth: 'auto',
         styles: { 
-          fontSize: 9,
-          cellPadding: 3,
+          fontSize: 10,
+          cellPadding: 4,
         },
         headStyles: { 
           fillColor: [13, 71, 161],
@@ -278,10 +279,10 @@ export default function AdminDashboard() {
           fillColor: [245, 245, 245],
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 15 },
-          1: { cellWidth: 40 },
-          2: { cellWidth: 50 },
-          3: { halign: 'center', cellWidth: 30 },
+          0: { halign: 'center', cellWidth: 20 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 60 },
+          3: { halign: 'center', cellWidth: 35 },
         },
       })
 
