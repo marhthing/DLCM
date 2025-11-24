@@ -410,7 +410,7 @@ export default function Stream() {
             data-testid="iframe-youtube-stream"
             width="100%"
             height="100%"
-            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=1`}
+            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -427,15 +427,10 @@ export default function Stream() {
           </CardHeader>
           <CardContent>
             {isStreamLive ? (
-              <div className="space-y-2">
-                <p className="text-gray-400" data-testid="text-instructions">
-                  Your attendance is being tracked. Please keep this window open during the service.
-                  You can minimize but don't close the tab.
-                </p>
-                <p className="text-blue-400 text-sm font-medium">
-                  💡 The video starts muted to comply with browser policies. Click the unmute button on the video player to hear audio.
-                </p>
-              </div>
+              <p className="text-gray-400" data-testid="text-instructions">
+                Your attendance is being tracked. Please keep this window open during the service.
+                You can minimize but don't close the tab.
+              </p>
             ) : (
               <div className="space-y-2">
                 <p className="text-yellow-400 font-medium" data-testid="text-stream-not-live">
