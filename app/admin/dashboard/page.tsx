@@ -125,8 +125,8 @@ export default function AdminDashboard() {
 
     const doc = new jsPDF()
 
-    // Load and add church logo from local assets
-    const logoUrl = '/attached_assets/DLCM_1764013146463.jpg'
+    // Load and add church logo from public folder
+    const logoUrl = '/church-logo.jpg'
     const img = new Image()
     img.src = logoUrl
 
