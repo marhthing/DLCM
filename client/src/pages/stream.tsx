@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Clock, CheckCircle, AlertCircle, Timer } from "lucide-react";
+import { Clock, CheckCircle, AlertCircle, Timer, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { StreamSettings } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +14,8 @@ export default function Stream() {
   const [checkingLiveStatus, setCheckingLiveStatus] = useState<boolean>(true);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [iframeLoading, setIframeLoading] = useState<boolean>(true);
+  const [activeViewersCount, setActiveViewersCount] = useState<number>(0);
+  const [streamTitle, setStreamTitle] = useState<string>("");
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const streamSessionIdRef = useRef<string>("");
@@ -54,13 +56,17 @@ export default function Stream() {
         );
         
         if (response.ok) {
-          // Video exists, assume it's live if it's configured in settings
+          const data = await response.json();
+          // Set stream title from YouTube metadata
+          setStreamTitle(data.title || "Live Stream");
           setIsStreamLive(true);
         } else {
+          setStreamTitle("");
           setIsStreamLive(false);
         }
       } catch (error) {
         console.error('Error checking stream status:', error);
+        setStreamTitle("");
         setIsStreamLive(false);
       } finally {
         setCheckingLiveStatus(false);
@@ -245,6 +251,33 @@ export default function Stream() {
     };
   }, [user, isStreamLive, streamSettings?.youtubeUrl]);
 
+  // Fetch active viewers count periodically
+  useEffect(() => {
+    if (!isStreamLive) {
+      setActiveViewersCount(0);
+      return;
+    }
+
+    const fetchActiveViewers = async () => {
+      try {
+        const response = await fetch("/api/attendance/active-count");
+        if (response.ok) {
+          const data = await response.json();
+          setActiveViewersCount(data.count);
+        }
+      } catch (error) {
+        console.error('Error fetching active viewers:', error);
+      }
+    };
+
+    // Fetch immediately
+    fetchActiveViewers();
+
+    // Then fetch every 10 seconds
+    const interval = setInterval(fetchActiveViewers, 10000);
+    return () => clearInterval(interval);
+  }, [isStreamLive]);
+
   // Format time helper
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -284,30 +317,39 @@ export default function Stream() {
   return (
     <div className="min-h-screen bg-gray-900 dark:bg-black">
       <div className="bg-gray-800 dark:bg-gray-950 border-b border-gray-700 dark:border-gray-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
-          <div className="flex items-center gap-3">
-            {isStreamLive ? (
-              <CheckCircle 
-                className="text-green-500" 
-                size={24} 
-                data-testid="icon-attendance-active" 
-              />
-            ) : (
-              <AlertCircle 
-                className="text-yellow-500" 
-                size={24} 
-                data-testid="icon-stream-offline" 
-              />
-            )}
-            <div>
-              <h2 className="text-white font-semibold" data-testid="text-user-name">
-                {user.name}
-              </h2>
-              <p className="text-gray-400 text-sm" data-testid="text-user-email">
-                {user.email}
-              </p>
+        <div className="max-w-7xl mx-auto space-y-3">
+          {streamTitle && (
+            <div className="flex items-center justify-center gap-2 pb-2 border-b border-gray-700">
+              <h1 className="text-xl md:text-2xl font-bold text-white text-center" data-testid="text-stream-title">
+                {streamTitle}
+              </h1>
             </div>
-          </div>
+          )}
+          
+          <div className="flex flex-wrap justify-between items-center gap-4">
+            <div className="flex items-center gap-3">
+              {isStreamLive ? (
+                <CheckCircle 
+                  className="text-green-500" 
+                  size={24} 
+                  data-testid="icon-attendance-active" 
+                />
+              ) : (
+                <AlertCircle 
+                  className="text-yellow-500" 
+                  size={24} 
+                  data-testid="icon-stream-offline" 
+                />
+              )}
+              <div>
+                <h2 className="text-white font-semibold" data-testid="text-user-name">
+                  {user.name}
+                </h2>
+                <p className="text-gray-400 text-sm" data-testid="text-user-email">
+                  {user.email}
+                </p>
+              </div>
+            </div>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <Clock size={20} className="text-blue-400" data-testid="icon-attendance-clock" />
@@ -327,6 +369,13 @@ export default function Stream() {
             </div>
             {isStreamLive && (
               <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+                <div className="flex items-center gap-1" data-testid="container-active-viewers">
+                  <Users size={16} className="text-green-400" />
+                  <span className="text-gray-500">Active viewers:</span>
+                  <span className="font-medium text-green-400" data-testid="text-active-viewers">
+                    {activeViewersCount}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1" data-testid="container-start-time">
                   <span className="text-gray-500">Started:</span>
                   <span className="font-medium" data-testid="text-start-time">
@@ -342,6 +391,7 @@ export default function Stream() {
                 </div>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

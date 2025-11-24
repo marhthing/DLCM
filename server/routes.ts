@@ -5,6 +5,10 @@ import { insertAttendanceRecordSchema, heartbeatAttendanceSchema, youtubeUrlUpda
 
 const ADMIN_PASSWORD = "admin123";
 
+// Track active viewers (email -> last heartbeat timestamp)
+const activeViewers = new Map<string, number>();
+const VIEWER_TIMEOUT_MS = 60000; // 1 minute timeout
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get stream settings
   app.get("/api/stream/settings", async (_req, res) => {
@@ -68,6 +72,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { email, streamSessionId, name, startTime, durationSeconds } = result.data;
+      
+      // Update active viewers
+      activeViewers.set(email, Date.now());
+      
       const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
         name,
         startTime,
@@ -77,6 +85,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(record);
     } catch (error) {
       console.error('Heartbeat error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get active viewers count
+  app.get("/api/attendance/active-count", async (_req, res) => {
+    try {
+      const now = Date.now();
+      // Remove stale viewers (no heartbeat in last minute)
+      for (const [email, lastSeen] of activeViewers.entries()) {
+        if (now - lastSeen > VIEWER_TIMEOUT_MS) {
+          activeViewers.delete(email);
+        }
+      }
+      
+      res.json({ count: activeViewers.size });
+    } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
   });
