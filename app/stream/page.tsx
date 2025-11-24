@@ -299,6 +299,11 @@ export default function StreamPage() {
           />
         </div>
 
+        {/* Video Title */}
+        <div className="px-2">
+          <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
+        </div>
+
         {/* Info Cards - Responsive Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           {/* User Info */}
