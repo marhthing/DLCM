@@ -82,6 +82,9 @@ export default function StreamPage() {
     const videoId = extractVideoId(streamSettings.youtubeUrl)
     if (!videoId) return
 
+    // Don't start heartbeat until we have the real stream title (not the default)
+    if (streamTitle === 'Live Service') return
+
     const sessionId = generateStreamSessionId(videoId, streamTitle)
     streamSessionIdRef.current = sessionId
 
