@@ -31,6 +31,10 @@ export default function AdminDashboard() {
   // Filtering state
   const [filterDate, setFilterDate] = useState('')
   const [filterTitle, setFilterTitle] = useState('')
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const recordsPerPage = 15
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('adminAuth')
@@ -57,6 +61,17 @@ export default function AdminDashboard() {
     const titleMatch = filterTitle ? record.streamTitle === filterTitle : true
     return dateMatch && titleMatch
   })
+  
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
+  const startIndex = (currentPage - 1) * recordsPerPage
+  const endIndex = startIndex + recordsPerPage
+  const paginatedRecords = filteredRecords.slice(startIndex, endIndex)
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filterDate, filterTitle])
 
   const updateUrlMutation = useMutation({
     mutationFn: async (url: string) => {
@@ -269,7 +284,8 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 <div className="mb-2 text-sm text-muted-foreground">
-                  Showing {filteredRecords.length} of {attendanceRecords.length} records
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} {filterDate || filterTitle ? 'filtered' : ''} records
+                  {(filterDate || filterTitle) && ` (${attendanceRecords.length} total)`}
                 </div>
                 <div className="border rounded-lg overflow-auto">
                   <Table>
@@ -284,7 +300,7 @@ export default function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredRecords.map((record) => (
+                      {paginatedRecords.map((record) => (
                         <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
                           <TableCell className="font-medium">{record.name}</TableCell>
                           <TableCell>{record.email}</TableCell>
@@ -303,6 +319,63 @@ export default function AdminDashboard() {
                     </TableBody>
                   </Table>
                 </div>
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
+                    <div className="text-sm text-muted-foreground">
+                      Page {currentPage} of {totalPages}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        data-testid="button-previous-page"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => {
+                          // Show first page, last page, current page, and pages around current
+                          return page === 1 || 
+                                 page === totalPages || 
+                                 Math.abs(page - currentPage) <= 1
+                        })
+                        .map((page, index, array) => {
+                          // Add ellipsis if there's a gap
+                          const showEllipsisBefore = index > 0 && page - array[index - 1] > 1
+                          return (
+                            <>
+                              {showEllipsisBefore && (
+                                <span key={`ellipsis-${page}`} className="px-2 py-1">...</span>
+                              )}
+                              <Button
+                                key={page}
+                                data-testid={`button-page-${page}`}
+                                variant={currentPage === page ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => setCurrentPage(page)}
+                                className="min-w-[2.5rem]"
+                              >
+                                {page}
+                              </Button>
+                            </>
+                          )
+                        })}
+                      <Button
+                        data-testid="button-next-page"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </CardContent>
