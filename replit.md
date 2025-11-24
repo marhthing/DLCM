@@ -1,7 +1,7 @@
 # Church Live Stream Attendance Tracker
 
 ## Overview
-A web application that allows church members to watch live-streamed services and automatically tracks their attendance based on viewing duration. Features admin controls for managing the stream URL and viewing attendance reports.
+A Next.js web application that allows church members to watch live-streamed services and automatically tracks their attendance based on viewing duration. Features admin controls for managing the stream URL and viewing attendance reports.
 
 ## Purpose
 - Enable remote church attendance tracking
@@ -9,19 +9,20 @@ A web application that allows church members to watch live-streamed services and
 - Allow administrators to monitor attendance and export data for records
 
 ## Current State
-Production-ready MVP with all core features implemented and functional.
+Production-ready for Vercel deployment. Successfully migrated from Express to Next.js App Router.
 
 ## Recent Changes (November 24, 2025)
-- **LATEST**: Migrated from in-memory/Supabase to Google Sheets storage with race-condition-safe initialization
-- **LATEST**: Implemented heartbeat-based attendance system (30-second intervals) to prevent auto-refresh issues
-- **LATEST**: Added session-based tracking with streamSessionId (videoId + date) for preventing duplicate records
-- **LATEST**: Real-time UI showing start time, elapsed duration, and remaining time with live counters
-- **LATEST**: Auto-migration system for backward compatibility (upgrades old 7-column sheets to 9-column format)
-- **LATEST**: Fixed start time accuracy using refs and explicit parameter passing to avoid closure capture
-- Initial implementation of the church attendance tracking system
-- Four main pages: User Login, Stream Viewer, Admin Login, Admin Dashboard
-- YouTube stream URL management
-- CSV export functionality for attendance data
+- **LATEST**: Migrated from Express backend to Next.js App Router for Vercel deployment
+- **LATEST**: Converted all Express API routes to Next.js route handlers
+- **LATEST**: Added React Query provider for state management across admin pages
+- **LATEST**: Implemented shared active viewer tracking using lib/active-viewers.ts
+- **LATEST**: Secured admin password using ADMIN_PASSWORD environment variable
+- Migrated from in-memory/Supabase to Google Sheets storage with race-condition-safe initialization
+- Implemented heartbeat-based attendance system (30-second intervals) to prevent auto-refresh issues
+- Added session-based tracking with streamSessionId (videoId + date) for preventing duplicate records
+- Real-time UI showing start time, elapsed duration, and remaining time with live counters
+- Auto-migration system for backward compatibility (upgrades old 7-column sheets to 9-column format)
+- Fixed start time accuracy using refs and explicit parameter passing to avoid closure capture
 
 ## User Preferences
 - Clean, modern UI with indigo color scheme
@@ -31,17 +32,18 @@ Production-ready MVP with all core features implemented and functional.
 
 ## Project Architecture
 
-### Frontend (React + Wouter)
-- **Login Page** (`/`) - Users enter name and email to join stream
-- **Stream Page** (`/stream`) - YouTube embed with attendance tracking
-- **Admin Login** (`/admin/login`) - Password-protected admin access
-- **Admin Dashboard** (`/admin/dashboard`) - Stream management and attendance records
+### Frontend (Next.js App Router)
+- **Login Page** (`app/page.tsx`) - Users enter name and email to join stream
+- **Stream Page** (`app/stream/page.tsx`) - YouTube embed with attendance tracking
+- **Admin Login** (`app/admin/login/page.tsx`) - Password-protected admin access
+- **Admin Dashboard** (`app/admin/dashboard/page.tsx`) - Stream management and attendance records
 
-### Backend (Express API)
+### Backend (Next.js API Routes)
 - **GET `/api/stream/settings`** - Fetch current YouTube URL
 - **PUT `/api/stream/settings`** - Update YouTube URL (admin)
 - **GET `/api/attendance/records`** - Get all attendance records (admin)
-- **POST `/api/attendance/record`** - Record user attendance
+- **POST `/api/attendance/heartbeat`** - Record user attendance heartbeat
+- **GET `/api/attendance/active-count`** - Get count of active viewers
 - **POST `/api/admin/login`** - Authenticate admin user
 
 ### Data Models
@@ -86,6 +88,7 @@ Production-ready MVP with all core features implemented and functional.
 4. Export attendance to CSV for records
 
 ## Technical Notes
+- **Next.js Framework**: Using App Router with React Server Components where appropriate
 - **Session Management**: localStorage persists user data + lastStreamSessionId across refreshes
 - **Heartbeat System**: 30-second intervals update attendance without causing page refreshes
 - **Session ID Format**: `${videoId}_${YYYY-MM-DD}` uniquely identifies each stream session
@@ -94,9 +97,19 @@ Production-ready MVP with all core features implemented and functional.
 - **Auto-Migration**: Google Sheets storage automatically detects and upgrades old 7-column format
 - **Legacy Preservation**: Old records backfilled with `legacy-${rowId}` session IDs, never overwritten
 - **Upsert Logic**: Matches by exact streamSessionId only (no legacy fallback)
+- **Active Viewers**: In-memory tracking works locally; for production on Vercel consider adding persistent storage
 - YouTube URLs automatically converted to embed format
 - Dark theme on stream page for comfortable viewing
 - Gradient backgrounds on login pages for visual appeal
 
+## Deployment to Vercel
+1. Set environment variables in Vercel dashboard:
+   - `GOOGLE_SPREADSHEET_ID` - Your Google Sheet ID
+   - `ADMIN_PASSWORD` - Secure admin password (do NOT use default)
+2. Deploy using `vercel` CLI or connect GitHub repository
+3. Note: Active viewer count uses in-memory Map (resets on serverless function cold starts)
+   - For accurate production counts, consider implementing persistent storage (Redis, Upstash, etc.)
+
 ## Environment Variables Required
 - `GOOGLE_SPREADSHEET_ID`: ID of the Google Sheet for attendance data (required for production)
+- `ADMIN_PASSWORD`: Admin password for dashboard access (defaults to "admin123" if not set - **MUST be set in production**)
