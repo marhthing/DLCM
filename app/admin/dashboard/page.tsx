@@ -18,9 +18,14 @@ import autoTable from 'jspdf-autotable'
 
 // Helper function to format duration
 const formatDuration = (durationSeconds: number): string => {
-  const minutes = Math.floor(durationSeconds / 60)
+  const hours = Math.floor(durationSeconds / 3600)
+  const minutes = Math.floor((durationSeconds % 3600) / 60)
   const seconds = durationSeconds % 60
-  return `${minutes} mins ${seconds} secs`
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`
+  }
+  return `${minutes}m ${seconds}s`
 }
 
 export default function AdminDashboard() {
