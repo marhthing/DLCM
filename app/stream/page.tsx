@@ -122,7 +122,7 @@ export default function StreamPage() {
         .catch(console.error)
     }
     fetchActiveViewers()
-    activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 10000)
+    activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
 
     return () => {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
