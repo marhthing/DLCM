@@ -9,12 +9,12 @@ async function getAccessToken() {
   if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
     return connectionSettings.settings.access_token;
   }
-  
+
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
-  const xReplitToken = process.env.REPL_IDENTITY 
-    ? 'repl ' + process.env.REPL_IDENTITY 
-    : process.env.WEB_REPL_RENEWAL 
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL 
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? 'repl ' + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+    ? 'depl ' + process.env.WEB_REPL_RENEWAL
     : null;
 
   if (!xReplitToken) {
@@ -58,7 +58,7 @@ export class GoogleSheetsStorage implements IStorage {
 
   constructor() {
     this.spreadsheetId = process.env.GOOGLE_SPREADSHEET_ID || '';
-    
+
     if (!this.spreadsheetId) {
       console.error('❌ Missing GOOGLE_SPREADSHEET_ID environment variable!');
       console.error('Please add GOOGLE_SPREADSHEET_ID to your environment variables.');
@@ -72,7 +72,7 @@ export class GoogleSheetsStorage implements IStorage {
   private async initializeSheets(): Promise<void> {
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       // Get existing sheets
       const response = await sheets.spreadsheets.get({
         spreadsheetId: this.spreadsheetId,
@@ -114,11 +114,11 @@ export class GoogleSheetsStorage implements IStorage {
         });
 
         const headers = headerResponse.data.values?.[0] || [];
-        
+
         // Migrate from 7-column format to 10-column format
         if (headers.length === 7 && !headers.includes('Stream Session ID')) {
           console.log('Migrating Attendance Records sheet from old schema to new schema...');
-          
+
           // Update headers
           await sheets.spreadsheets.values.update({
             spreadsheetId: this.spreadsheetId,
@@ -136,13 +136,13 @@ export class GoogleSheetsStorage implements IStorage {
           });
 
           const oldRows = dataResponse.data.values || [];
-          
+
           if (oldRows.length > 0) {
             // Migrate each row: backfill streamSessionId and streamTitle
             const migratedRows = oldRows.map((row, index) => {
               const rowId = row[0] || `row${index}`;
               const legacySessionId = `legacy-${rowId}`;
-              
+
               return [
                 row[0] || '', // ID
                 row[1] || '', // Name
@@ -170,11 +170,11 @@ export class GoogleSheetsStorage implements IStorage {
             console.log(`Migrated ${oldRows.length} attendance records to new schema.`);
           }
         }
-        
+
         // Migrate from 9-column format to 10-column format (add streamTitle)
         else if (headers.length === 9 && !headers.includes('Stream Title')) {
           console.log('Migrating Attendance Records sheet to include Stream Title...');
-          
+
           // Update headers
           await sheets.spreadsheets.values.update({
             spreadsheetId: this.spreadsheetId,
@@ -192,7 +192,7 @@ export class GoogleSheetsStorage implements IStorage {
           });
 
           const oldRows = dataResponse.data.values || [];
-          
+
           if (oldRows.length > 0) {
             // Add streamTitle column (backfill with "Live Service")
             const migratedRows = oldRows.map((row) => {
@@ -224,7 +224,7 @@ export class GoogleSheetsStorage implements IStorage {
           }
         }
       }
-      }
+
 
       // Create Stream Settings sheet if it doesn't exist
       if (!existingSheets.includes(this.settingsSheetName)) {
@@ -262,14 +262,14 @@ export class GoogleSheetsStorage implements IStorage {
     await this.initPromise;
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: `${this.attendanceSheetName}!A2:J`,
       });
 
       const rows = response.data.values || [];
-      
+
       return rows.map(row => ({
         id: row[0] || '',
         name: row[1] || '',
@@ -293,7 +293,7 @@ export class GoogleSheetsStorage implements IStorage {
     const id = randomUUID();
     const timestamp = new Date().toISOString();
     const lastSeenAt = insertRecord.endTime || new Date().toISOString();
-    
+
     const record: AttendanceRecord = {
       id,
       name: insertRecord.name,
@@ -309,7 +309,7 @@ export class GoogleSheetsStorage implements IStorage {
 
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       await sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
         range: `${this.attendanceSheetName}!A2:J`,
@@ -339,10 +339,10 @@ export class GoogleSheetsStorage implements IStorage {
 
   async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; streamTitle: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
     await this.initPromise;
-    
+
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       // Fetch all records to find existing one
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -448,8 +448,17 @@ export class GoogleSheetsStorage implements IStorage {
 
       return record;
     } catch (error) {
-      console.error('Error upserting attendance record:', error);
-      throw new Error('Failed to upsert attendance record');
+      console.error('Error in upsertAttendanceRecord:', error);
+      throw error;
+    } finally {
+      // Ensure proper cleanup if needed
+    }
+
+    if (!existingRecord) {
+      // This part of the code is unreachable because the function returns within the try block
+      // if an existing record is found and updated, or throws an error if something goes wrong.
+      // If no existing record is found, a new one is created and returned.
+      // Therefore, this 'if' condition will never be met after the try-catch-finally block.
     }
   }
 
@@ -457,14 +466,14 @@ export class GoogleSheetsStorage implements IStorage {
     await this.initPromise;
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
         range: `${this.settingsSheetName}!A2:C2`,
       });
 
       const rows = response.data.values || [];
-      
+
       if (rows.length === 0) {
         return undefined;
       }
@@ -495,7 +504,7 @@ export class GoogleSheetsStorage implements IStorage {
 
     try {
       const sheets = await getUncachableGoogleSheetClient();
-      
+
       // Update or create the first row of settings
       await sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
