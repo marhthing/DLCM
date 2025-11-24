@@ -53,8 +53,8 @@ export class MemStorage implements IStorage {
   }
 }
 
-import { SupabaseStorage } from "./supabase-storage";
+import { GoogleSheetsStorage } from "./google-sheets-storage";
 
-// Using Supabase storage
-// Make sure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY are set in Secrets
-export const storage = new SupabaseStorage();
+// Using Google Sheets storage
+// Make sure GOOGLE_SPREADSHEET_ID is set in environment variables
+export const storage = new GoogleSheetsStorage();
