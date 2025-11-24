@@ -13,9 +13,20 @@ async function getGoogleSheetClient() {
 
   let credentials;
   try {
-    credentials = JSON.parse(serviceAccountKey);
+    // Trim any whitespace
+    const trimmedKey = serviceAccountKey.trim();
+    credentials = JSON.parse(trimmedKey);
+    
+    // Validate required fields
+    if (!credentials.client_email || !credentials.private_key) {
+      throw new Error('Service account JSON is missing required fields (client_email or private_key)');
+    }
+    
+    console.log('✅ Service Account Email:', credentials.client_email);
+    console.log('✅ Using service account authentication');
   } catch (error) {
-    throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
+    console.error('❌ Error parsing GOOGLE_SERVICE_ACCOUNT_KEY:', error);
+    throw new Error(`Invalid GOOGLE_SERVICE_ACCOUNT_KEY format. Must be valid JSON. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   const auth = new google.auth.GoogleAuth({
