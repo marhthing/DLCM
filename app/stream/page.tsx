@@ -88,43 +88,70 @@ export default function StreamPage() {
     const sessionId = generateStreamSessionId(videoId, streamTitle)
     streamSessionIdRef.current = sessionId
 
-    const isNewSession = !user.lastStreamSessionId || user.lastStreamSessionId !== sessionId
-    
-    if (isNewSession) {
-      const newStartTime = Date.now()
-      currentStartTimeRef.current = newStartTime
-      
-      const updatedUser = {
-        ...user,
-        startTime: newStartTime,
-        lastStreamSessionId: sessionId
+    // Check database for existing session
+    const initializeSession = async () => {
+      try {
+        const response = await fetch('/api/attendance/records')
+        const records = await response.json()
+        
+        // Find existing record for this user and stream session
+        const existingRecord = records.find((record: any) => 
+          record.email === user.email && record.streamSessionId === sessionId
+        )
+
+        if (existingRecord) {
+          // Use start time from database
+          const dbStartTime = new Date(existingRecord.startTime).getTime()
+          currentStartTimeRef.current = dbStartTime
+          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
+          
+          // Update localStorage with database start time
+          const updatedUser = {
+            ...user,
+            startTime: dbStartTime,
+            lastStreamSessionId: sessionId
+          }
+          setUser(updatedUser)
+          localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+        } else {
+          // New session - create new start time
+          const newStartTime = Date.now()
+          currentStartTimeRef.current = newStartTime
+          
+          const updatedUser = {
+            ...user,
+            startTime: newStartTime,
+            lastStreamSessionId: sessionId
+          }
+          setUser(updatedUser)
+          localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+        }
+
+        // Start heartbeat and timer
+        heartbeatIntervalRef.current = setInterval(() => {
+          sendHeartbeat()
+        }, 30000)
+
+        sendHeartbeat()
+
+        timerIntervalRef.current = setInterval(() => {
+          setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
+        }, 1000)
+
+        const fetchActiveViewers = () => {
+          fetch('/api/attendance/active-count')
+            .then(res => res.json())
+            .then(data => setActiveViewersCount(data.count || 0))
+            .catch(console.error)
+        }
+        fetchActiveViewers()
+        activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
+      } catch (error) {
+        console.error('Failed to check existing session:', error)
       }
-      setUser(updatedUser)
-      localStorage.setItem('churchUser', JSON.stringify(updatedUser))
-    } else {
-      // Resuming existing session - use the original start time from localStorage
-      currentStartTimeRef.current = user.startTime
-      setElapsedSeconds(Math.floor((Date.now() - user.startTime) / 1000))
     }
 
-    heartbeatIntervalRef.current = setInterval(() => {
-      sendHeartbeat()
-    }, 30000)
-
-    sendHeartbeat()
-
-    timerIntervalRef.current = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
-    }, 1000)
-
-    const fetchActiveViewers = () => {
-      fetch('/api/attendance/active-count')
-        .then(res => res.json())
-        .then(data => setActiveViewersCount(data.count || 0))
-        .catch(console.error)
-    }
-    fetchActiveViewers()
-    activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
+    initializeSession()
 
     return () => {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
