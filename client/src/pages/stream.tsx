@@ -13,6 +13,7 @@ export default function Stream() {
   const [isStreamLive, setIsStreamLive] = useState<boolean>(false);
   const [checkingLiveStatus, setCheckingLiveStatus] = useState<boolean>(true);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+  const [iframeLoading, setIframeLoading] = useState<boolean>(true);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const streamSessionIdRef = useRef<string>("");
@@ -346,16 +347,25 @@ export default function Stream() {
       </div>
 
       <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div className="aspect-video bg-black rounded-md overflow-hidden shadow-2xl">
+        <div className="aspect-video bg-black rounded-md overflow-hidden shadow-2xl relative">
+          {iframeLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+              <div className="text-center">
+                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-500 border-r-transparent"></div>
+                <p className="mt-4 text-white text-sm">Loading stream...</p>
+              </div>
+            </div>
+          )}
           <iframe
             data-testid="iframe-youtube-stream"
             width="100%"
             height="100%"
-            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0`}
+            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=1`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
+            onLoad={() => setIframeLoading(false)}
           ></iframe>
         </div>
 
@@ -367,10 +377,15 @@ export default function Stream() {
           </CardHeader>
           <CardContent>
             {isStreamLive ? (
-              <p className="text-gray-400" data-testid="text-instructions">
-                Your attendance is being tracked. Please keep this window open during the service.
-                You can minimize but don't close the tab.
-              </p>
+              <div className="space-y-2">
+                <p className="text-gray-400" data-testid="text-instructions">
+                  Your attendance is being tracked. Please keep this window open during the service.
+                  You can minimize but don't close the tab.
+                </p>
+                <p className="text-blue-400 text-sm font-medium">
+                  💡 The video starts muted to comply with browser policies. Click the unmute button on the video player to hear audio.
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-yellow-400 font-medium" data-testid="text-stream-not-live">
