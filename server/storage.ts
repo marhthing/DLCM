@@ -1,37 +1,59 @@
-import { type User, type InsertUser } from "@shared/schema";
+import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertStreamSettings } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Attendance Records
+  getAttendanceRecords(): Promise<AttendanceRecord[]>;
+  createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
+  
+  // Stream Settings
+  getStreamSettings(): Promise<StreamSettings | undefined>;
+  updateStreamSettings(settings: InsertStreamSettings): Promise<StreamSettings>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private attendanceRecords: Map<string, AttendanceRecord>;
+  private streamSettings: StreamSettings | undefined;
 
   constructor() {
-    this.users = new Map();
+    this.attendanceRecords = new Map();
+    // Initialize with a default YouTube URL
+    this.streamSettings = {
+      id: randomUUID(),
+      youtubeUrl: "https://www.youtube.com/embed/jfKfPfyJRdk",
+      updatedAt: new Date().toISOString(),
+    };
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+  async getAttendanceRecords(): Promise<AttendanceRecord[]> {
+    return Array.from(this.attendanceRecords.values()).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createAttendanceRecord(insertRecord: InsertAttendanceRecord): Promise<AttendanceRecord> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const record: AttendanceRecord = {
+      ...insertRecord,
+      id,
+      timestamp: new Date().toISOString(),
+    };
+    this.attendanceRecords.set(id, record);
+    return record;
+  }
+
+  async getStreamSettings(): Promise<StreamSettings | undefined> {
+    return this.streamSettings;
+  }
+
+  async updateStreamSettings(insertSettings: InsertStreamSettings): Promise<StreamSettings> {
+    const settings: StreamSettings = {
+      id: this.streamSettings?.id || randomUUID(),
+      ...insertSettings,
+      updatedAt: new Date().toISOString(),
+    };
+    this.streamSettings = settings;
+    return settings;
   }
 }
 

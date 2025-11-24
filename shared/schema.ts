@@ -1,18 +1,58 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export const attendanceRecords = pgTable("attendance_records", {
+  id: varchar("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time"),
+  durationSeconds: integer("duration_seconds").notNull().default(0),
+  timestamp: text("timestamp").notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const streamSettings = pgTable("stream_settings", {
+  id: varchar("id").primaryKey(),
+  youtubeUrl: text("youtube_url").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
+export const insertAttendanceRecordSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  startTime: z.string(),
+  endTime: z.string().optional(),
+  durationSeconds: z.number().int().min(0),
+});
+
+export const insertStreamSettingsSchema = z.object({
+  youtubeUrl: z.string().min(1),
+});
+
+export type AttendanceRecord = typeof attendanceRecords.$inferSelect;
+export type InsertAttendanceRecord = z.infer<typeof insertAttendanceRecordSchema>;
+export type StreamSettings = typeof streamSettings.$inferSelect;
+export type InsertStreamSettings = z.infer<typeof insertStreamSettingsSchema>;
+
+// Viewer session schema (for tracking active sessions)
+export const viewerSessionSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+});
+
+export type ViewerSession = z.infer<typeof viewerSessionSchema>;
+
+// Admin login schema
+export const adminLoginSchema = z.object({
+  password: z.string().min(1, "Password is required"),
+});
+
+export type AdminLogin = z.infer<typeof adminLoginSchema>;
+
+// YouTube URL update schema
+export const youtubeUrlUpdateSchema = z.object({
+  url: z.string().min(1, "YouTube URL is required"),
+});
+
+export type YoutubeUrlUpdate = z.infer<typeof youtubeUrlUpdateSchema>;
