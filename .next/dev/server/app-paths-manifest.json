@@ -1,8 +1,1 @@
-{
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/api/attendance/active-count/route": "app/api/attendance/active-count/route.js",
-  "/api/attendance/heartbeat/route": "app/api/attendance/heartbeat/route.js",
-  "/api/attendance/records/route": "app/api/attendance/records/route.js",
-  "/api/stream/settings/route": "app/api/stream/settings/route.js",
-  "/stream/page": "app/stream/page.js"
-}
+{}
