@@ -266,13 +266,7 @@ export default function StreamPage() {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
             onLoad={() => setIframeLoading(false)}
-            style={{ pointerEvents: 'none' }}
-          />
-          {/* Invisible overlay to block clicks while allowing video interaction */}
-          <div 
-            className="absolute inset-0 z-[5]" 
-            style={{ pointerEvents: 'auto', cursor: 'default' }}
-            onClick={(e) => e.preventDefault()}
+            style={{ pointerEvents: 'auto' }}
           />
         </div>
 
