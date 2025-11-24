@@ -288,7 +288,7 @@ export class GoogleSheetsStorage {
       streamSessionId: insertRecord.streamSessionId,
       streamTitle: insertRecord.streamTitle,
       startTime: insertRecord.startTime,
-      endTime: insertRecord.endTime,
+      endTime: insertRecord.endTime ?? null,
       lastSeenAt,
       durationSeconds: insertRecord.durationSeconds,
       timestamp,
