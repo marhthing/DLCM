@@ -64,7 +64,24 @@ export default function Stream() {
 
   if (!user) return null;
 
-  const youtubeUrl = streamSettings?.youtubeUrl || "https://www.youtube.com/embed/jfKfPfyJRdk";
+  const youtubeUrl = streamSettings?.youtubeUrl;
+
+  if (!youtubeUrl) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Stream Not Configured</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              The administrator hasn't set up the stream URL yet. Please check back later.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 dark:bg-black">

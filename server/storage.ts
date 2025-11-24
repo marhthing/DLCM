@@ -17,12 +17,8 @@ export class MemStorage implements IStorage {
 
   constructor() {
     this.attendanceRecords = new Map();
-    // Initialize with a default YouTube URL
-    this.streamSettings = {
-      id: randomUUID(),
-      youtubeUrl: "https://www.youtube.com/embed/jfKfPfyJRdk",
-      updatedAt: new Date().toISOString(),
-    };
+    // Initialize with empty settings - admin will configure
+    this.streamSettings = undefined;
   }
 
   async getAttendanceRecords(): Promise<AttendanceRecord[]> {

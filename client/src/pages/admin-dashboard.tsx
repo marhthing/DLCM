@@ -145,9 +145,13 @@ export default function AdminDashboard() {
             >
               {updateUrlMutation.isPending ? "Updating..." : "Update Stream URL"}
             </Button>
-            {streamSettings && (
+            {streamSettings ? (
               <p className="text-sm text-muted-foreground" data-testid="text-current-url">
                 Current URL: <code className="bg-muted px-2 py-1 rounded-sm text-xs">{streamSettings.youtubeUrl}</code>
+              </p>
+            ) : (
+              <p className="text-sm text-amber-600 font-medium" data-testid="text-no-url">
+                ⚠️ No stream URL configured yet. Please set one above.
               </p>
             )}
           </CardContent>
