@@ -4,14 +4,18 @@ import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertSt
 import { randomUUID } from "crypto";
 import type { IStorage } from "./storage";
 
-const SUPABASE_URL = process.env.SUPABASE_URL || "https://ubkfowniejcaxrmgsujh.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVia2Zvd25pZWpjYXhybWdzdWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxMTg2NzAsImV4cCI6MjA3ODY5NDY3MH0.MG0rNqksB0NX8cqleP_AGorB04c-2REjVyfO_O-FHiw";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+  throw new Error('Missing required Supabase environment variables. Please add NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_KEY to your secrets.');
+}
 
 export class SupabaseStorage implements IStorage {
   private supabase: SupabaseClient;
 
   constructor() {
-    this.supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+    this.supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     this.initializeTables();
   }
 
