@@ -4,7 +4,7 @@ import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -45,10 +45,22 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-            <Settings className="text-primary-foreground" size={32} />
+          <div className="flex items-center justify-center mx-auto">
+            <img
+              src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png"
+              alt="Deeper Life Bible Church Logo"
+              className="h-20 w-auto object-contain"
+            />
           </div>
-          <CardTitle className="text-3xl font-bold">Admin Login</CardTitle>
+          <div>
+            <CardTitle className="text-3xl font-bold mb-2">Admin Access</CardTitle>
+            <CardDescription className="text-base font-medium">
+              Deeper Life Bible Church - Pontypridd Region
+            </CardDescription>
+            <CardDescription className="text-sm mt-2">
+              Enter your credentials to access the admin dashboard
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">

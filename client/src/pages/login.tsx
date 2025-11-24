@@ -27,12 +27,19 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-4">
-          <div className="bg-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-            <Youtube className="text-primary-foreground" size={32} />
+          <div className="flex items-center justify-center mx-auto">
+            <img 
+              src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
+              alt="Deeper Life Bible Church Logo"
+              className="h-20 w-auto object-contain"
+            />
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold mb-2">Church Live Stream</CardTitle>
-            <CardDescription className="text-base">
+            <CardTitle className="text-3xl font-bold mb-2">Deeper Life Bible Church</CardTitle>
+            <CardDescription className="text-base font-medium">
+              Pontypridd Region
+            </CardDescription>
+            <CardDescription className="text-sm mt-2">
               Sign in to watch and record your attendance
             </CardDescription>
           </div>

@@ -372,7 +372,7 @@ export default function Stream() {
         <Card className="mt-6 bg-gray-800 dark:bg-gray-950 border-gray-700 dark:border-gray-800">
           <CardHeader>
             <CardTitle className="text-white text-xl" data-testid="text-welcome-title">
-              Welcome to the Service!
+              Welcome to Deeper Life Bible Church - Pontypridd Region
             </CardTitle>
           </CardHeader>
           <CardContent>

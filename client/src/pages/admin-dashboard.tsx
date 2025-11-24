@@ -104,7 +104,10 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-background">
       <div className="border-b">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Admin Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Admin Dashboard</h1>
+            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - Pontypridd Region</p>
+          </div>
           <Button
             data-testid="button-logout"
             variant="link"
