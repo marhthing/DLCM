@@ -316,19 +316,19 @@ export default function Stream() {
 
   return (
     <div className="min-h-screen bg-gray-900 dark:bg-black">
-      <div className="bg-gray-800 dark:bg-gray-950 border-b border-gray-700 dark:border-gray-800 px-6 py-4">
+      <div className="bg-gray-800 dark:bg-gray-950 border-b border-gray-700 dark:border-gray-800 px-3 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto space-y-3">
-          <div className="flex items-center justify-center gap-3 pb-3 border-b border-gray-700">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 pb-3 border-b border-gray-700">
             <img 
               src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
               alt="Deeper Life Bible Church Logo" 
-              className="h-12 w-12 md:h-16 md:w-16 object-contain"
+              className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 object-contain shrink-0"
             />
             <div className="text-center">
-              <h1 className="text-lg md:text-xl font-bold text-white">
+              <h1 className="text-base sm:text-lg md:text-xl font-bold text-white">
                 Deeper Life Bible Church
               </h1>
-              <p className="text-sm md:text-base text-gray-300">
+              <p className="text-xs sm:text-sm md:text-base text-gray-300">
                 Pontypridd Region
               </p>
             </div>
@@ -336,58 +336,58 @@ export default function Stream() {
           
           {streamTitle && (
             <div className="flex items-center justify-center gap-2 pb-2 border-b border-gray-700">
-              <h2 className="text-lg md:text-xl font-semibold text-white text-center" data-testid="text-stream-title">
+              <h2 className="text-sm sm:text-base md:text-lg lg:text-xl font-semibold text-white text-center px-2" data-testid="text-stream-title">
                 {streamTitle}
               </h2>
             </div>
           )}
           
-          <div className="flex flex-wrap justify-between items-center gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 lg:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
               {isStreamLive ? (
                 <CheckCircle 
-                  className="text-green-500" 
-                  size={24} 
+                  className="text-green-500 shrink-0" 
+                  size={20} 
                   data-testid="icon-attendance-active" 
                 />
               ) : (
                 <AlertCircle 
-                  className="text-yellow-500" 
-                  size={24} 
+                  className="text-yellow-500 shrink-0" 
+                  size={20} 
                   data-testid="icon-stream-offline" 
                 />
               )}
-              <div>
-                <h2 className="text-white font-semibold" data-testid="text-user-name">
+              <div className="min-w-0">
+                <h2 className="text-white font-semibold text-sm sm:text-base truncate" data-testid="text-user-name">
                   {user.name}
                 </h2>
-                <p className="text-gray-400 text-sm" data-testid="text-user-email">
+                <p className="text-gray-400 text-xs sm:text-sm truncate" data-testid="text-user-email">
                   {user.email}
                 </p>
               </div>
             </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 w-full lg:w-auto">
             <div className="flex items-center gap-2">
-              <Clock size={20} className="text-blue-400" data-testid="icon-attendance-clock" />
+              <Clock size={16} className="text-blue-400 shrink-0" data-testid="icon-attendance-clock" />
               {checkingLiveStatus ? (
-                <span className="text-sm text-gray-400" data-testid="text-checking-status">
+                <span className="text-xs sm:text-sm text-gray-400" data-testid="text-checking-status">
                   Checking stream status...
                 </span>
               ) : isStreamLive ? (
-                <span className="text-sm text-green-400" data-testid="text-attendance-status">
+                <span className="text-xs sm:text-sm text-green-400" data-testid="text-attendance-status">
                   Attendance being recorded
                 </span>
               ) : (
-                <span className="text-sm text-yellow-400" data-testid="text-stream-offline">
+                <span className="text-xs sm:text-sm text-yellow-400" data-testid="text-stream-offline">
                   Stream offline - Attendance not recorded
                 </span>
               )}
             </div>
             {isStreamLive && (
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-300">
                 <div className="flex items-center gap-1" data-testid="container-active-viewers">
-                  <Users size={16} className="text-green-400" />
-                  <span className="text-gray-500">Active viewers:</span>
+                  <Users size={14} className="text-green-400" />
+                  <span className="text-gray-500">Active:</span>
                   <span className="font-medium text-green-400" data-testid="text-active-viewers">
                     {activeViewersCount}
                   </span>
@@ -399,7 +399,7 @@ export default function Stream() {
                   </span>
                 </div>
                 <div className="flex items-center gap-1" data-testid="container-duration">
-                  <Timer size={16} className="text-blue-400" />
+                  <Timer size={14} className="text-blue-400" />
                   <span className="text-gray-500">Watching:</span>
                   <span className="font-medium text-blue-400" data-testid="text-duration">
                     {formatDuration(elapsedSeconds)}
@@ -412,13 +412,13 @@ export default function Stream() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-4 md:p-6">
-        <div className="aspect-video bg-black rounded-md overflow-hidden shadow-2xl relative">
+      <div className="max-w-7xl mx-auto p-2 sm:p-4 md:p-6">
+        <div className="aspect-video bg-black rounded-sm sm:rounded-md overflow-hidden shadow-lg sm:shadow-2xl relative">
           {iframeLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
-                <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-500 border-r-transparent"></div>
-                <p className="mt-4 text-white text-sm">Loading stream...</p>
+                <div className="inline-block h-8 w-8 sm:h-12 sm:w-12 animate-spin rounded-full border-4 border-solid border-blue-500 border-r-transparent"></div>
+                <p className="mt-2 sm:mt-4 text-white text-xs sm:text-sm">Loading stream...</p>
               </div>
             </div>
           )}
@@ -426,33 +426,36 @@ export default function Stream() {
             data-testid="iframe-youtube-stream"
             width="100%"
             height="100%"
-            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0`}
+            src={`${youtubeUrl}${youtubeUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0&fs=1&modestbranding=1`}
             title="Church Live Stream"
             frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
+            webkitallowfullscreen="true"
+            mozallowfullscreen="true"
             onLoad={() => setIframeLoading(false)}
+            className="w-full h-full"
           ></iframe>
         </div>
 
-        <Card className="mt-6 bg-gray-800 dark:bg-gray-950 border-gray-700 dark:border-gray-800">
-          <CardHeader>
-            <CardTitle className="text-white text-xl" data-testid="text-welcome-title">
+        <Card className="mt-3 sm:mt-4 md:mt-6 bg-gray-800 dark:bg-gray-950 border-gray-700 dark:border-gray-800">
+          <CardHeader className="p-3 sm:p-4 md:p-6">
+            <CardTitle className="text-white text-sm sm:text-base md:text-lg lg:text-xl" data-testid="text-welcome-title">
               Welcome to Deeper Life Bible Church - Pontypridd Region
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6">
             {isStreamLive ? (
-              <p className="text-gray-400" data-testid="text-instructions">
+              <p className="text-gray-400 text-xs sm:text-sm md:text-base" data-testid="text-instructions">
                 Your attendance is being tracked. Please keep this window open during the service.
                 You can minimize but don't close the tab.
               </p>
             ) : (
               <div className="space-y-2">
-                <p className="text-yellow-400 font-medium" data-testid="text-stream-not-live">
+                <p className="text-yellow-400 font-medium text-xs sm:text-sm md:text-base" data-testid="text-stream-not-live">
                   The stream is not currently live.
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-400 text-xs sm:text-sm">
                   Your attendance will only be recorded when the live stream is active.
                   You can stay on this page and attendance will automatically start recording when the stream goes live.
                 </p>
