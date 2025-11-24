@@ -13,6 +13,8 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { apiRequest, queryClient } from '@/lib/queryClient'
 import type { AttendanceRecord, StreamSettings } from '@/shared/schema'
 import { format } from 'date-fns'
+import { jsPDF } from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 // Helper function to format duration
 const formatDuration = (durationSeconds: number): string => {
@@ -98,33 +100,48 @@ export default function AdminDashboard() {
     router.push('/')
   }
 
-  const exportToCSV = () => {
+  const exportToPDF = () => {
     const recordsToExport = filteredRecords.length > 0 ? filteredRecords : attendanceRecords
-    const csvContent = [
-      ['Name', 'Email', 'Service', 'Date', 'Start Time', 'Duration (minutes)'],
-      ...recordsToExport.map(record => [
-        record.name,
-        record.email,
-        record.streamTitle,
-        format(new Date(record.startTime), 'MMM dd, yyyy'),
-        format(new Date(record.startTime), 'h:mm a'),
-        Math.round(record.durationSeconds / 60).toString(),
-      ]),
-    ]
-      .map(row => row.join(','))
-      .join('\n')
-
-    const blob = new Blob([csvContent], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `attendance-records-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
-
+    
+    const doc = new jsPDF()
+    
+    // Add title
+    doc.setFontSize(18)
+    doc.text('Attendance Records', 14, 20)
+    
+    // Add subtitle with church name
+    doc.setFontSize(12)
+    doc.text('Deeper Life Bible Church - Pontypridd Region', 14, 28)
+    
+    // Add export date
+    doc.setFontSize(10)
+    doc.text(`Generated on: ${format(new Date(), 'MMM dd, yyyy h:mm a')}`, 14, 35)
+    
+    // Prepare table data
+    const tableData = recordsToExport.map(record => [
+      record.name,
+      record.email,
+      record.streamTitle,
+      format(new Date(record.startTime), 'MMM dd, yyyy'),
+      format(new Date(record.startTime), 'h:mm a'),
+      Math.round(record.durationSeconds / 60).toString(),
+    ])
+    
+    // Add table
+    autoTable(doc, {
+      head: [['Name', 'Email', 'Service', 'Date', 'Start Time', 'Duration (min)']],
+      body: tableData,
+      startY: 42,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [41, 128, 185] },
+    })
+    
+    // Save the PDF
+    doc.save(`attendance-records-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+    
     toast({
       title: 'Export successful',
-      description: `${recordsToExport.length} attendance records have been exported to CSV`,
+      description: `${recordsToExport.length} attendance records have been exported to PDF`,
     })
   }
 
@@ -243,14 +260,14 @@ export default function AdminDashboard() {
                     Clear Filters
                   </Button>
                   <Button
-                    data-testid="button-export-csv"
-                    onClick={exportToCSV}
+                    data-testid="button-export-pdf"
+                    onClick={exportToPDF}
                     disabled={attendanceRecords.length === 0}
                     variant="outline"
                     size="sm"
                   >
                     <Download className="mr-2 h-4 w-4" data-testid="icon-download" />
-                    Export CSV
+                    Export PDF
                   </Button>
                 </div>
                 <div className="mb-2 text-sm text-muted-foreground">
@@ -308,7 +325,7 @@ export default function AdminDashboard() {
                 • For permanent live stream, use: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-sm">CHANNEL_ID/live</code>
               </li>
               <li data-testid="instruction-tracking">• Attendance is recorded when users close the tab or leave</li>
-              <li data-testid="instruction-export">• Export data to CSV to upload to Google Sheets</li>
+              <li data-testid="instruction-export">• Export data to PDF for record keeping and printing</li>
             </ul>
           </CardContent>
         </Card>
