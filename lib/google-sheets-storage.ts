@@ -1,69 +1,29 @@
+
 import { google } from 'googleapis';
 import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertStreamSettings } from "@/shared/schema";
 import { randomUUID } from "crypto";
 
-let connectionSettings: any;
-
-async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
+async function getGoogleSheetClient() {
+  // Parse service account credentials from environment variable
+  const serviceAccountKey = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  
+  if (!serviceAccountKey) {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY environment variable is required. Please add your service account JSON credentials to Secrets.');
   }
 
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? 'repl ' + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? 'depl ' + process.env.WEB_REPL_RENEWAL
-    : null;
-
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
-  }
-
+  let credentials;
   try {
-    const response = await fetch(
-      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=google-sheet',
-      {
-        headers: {
-          'Accept': 'application/json',
-          'X_REPLIT_TOKEN': xReplitToken
-        }
-      }
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch connection settings: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    connectionSettings = data.items?.[0];
-
-    if (!connectionSettings || !connectionSettings.settings) {
-      throw new Error('Google Sheet connector not found. Please connect Google Sheets in the Replit Secrets/Tools panel.');
-    }
-
-    const accessToken = connectionSettings.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
-
-    if (!accessToken) {
-      throw new Error('Google Sheet access token not found. Please reconnect Google Sheets.');
-    }
-    
-    return accessToken;
+    credentials = JSON.parse(serviceAccountKey);
   } catch (error) {
-    console.error('Failed to get Google Sheets access token:', error);
-    throw error;
+    throw new Error('Invalid GOOGLE_SERVICE_ACCOUNT_KEY format. Must be valid JSON.');
   }
-}
 
-async function getUncachableGoogleSheetClient() {
-  const accessToken = await getAccessToken();
-
-  const oauth2Client = new google.auth.OAuth2();
-  oauth2Client.setCredentials({
-    access_token: accessToken
+  const auth = new google.auth.GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   });
 
-  return google.sheets({ version: 'v4', auth: oauth2Client });
+  return google.sheets({ version: 'v4', auth });
 }
 
 export class GoogleSheetsStorage {
@@ -87,7 +47,7 @@ export class GoogleSheetsStorage {
 
   private async initializeSheets(): Promise<void> {
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       // Get existing sheets
       const response = await sheets.spreadsheets.get({
@@ -277,7 +237,7 @@ export class GoogleSheetsStorage {
   async getAttendanceRecords(): Promise<AttendanceRecord[]> {
     await this.initPromise;
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -324,7 +284,7 @@ export class GoogleSheetsStorage {
     };
 
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
@@ -357,7 +317,7 @@ export class GoogleSheetsStorage {
     await this.initPromise;
 
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       // Fetch all records to find existing one
       const response = await sheets.spreadsheets.values.get({
@@ -472,7 +432,7 @@ export class GoogleSheetsStorage {
   async getStreamSettings(): Promise<StreamSettings | undefined> {
     await this.initPromise;
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
@@ -510,7 +470,7 @@ export class GoogleSheetsStorage {
     };
 
     try {
-      const sheets = await getUncachableGoogleSheetClient();
+      const sheets = await getGoogleSheetClient();
 
       // Update or create the first row of settings
       await sheets.spreadsheets.values.update({
