@@ -2,5 +2,6 @@
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
   "/api/attendance/records/route": "app/api/attendance/records/route.js",
   "/api/stream/settings/route": "app/api/stream/settings/route.js",
-  "/page": "app/page.js"
+  "/page": "app/page.js",
+  "/stream/page": "app/stream/page.js"
 }
