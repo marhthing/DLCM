@@ -69,7 +69,7 @@ export default function LoginPage() {
             </Button>
           </div>
           <div className="text-center">
-            <Button variant="link" onClick={() => router.push('/admin/login')} className="text-sm">
+            <Button variant="ghost" onClick={() => router.push('/admin/login')} className="text-sm">
               Admin Access
             </Button>
           </div>
