@@ -407,7 +407,7 @@ export class GoogleSheetsStorage {
         streamSessionId,
         streamTitle: data.streamTitle,
         startTime: data.startTime,
-        endTime: undefined,
+        endTime: null,
         lastSeenAt,
         durationSeconds: data.durationSeconds,
         timestamp,
