@@ -7,6 +7,7 @@ export const attendanceRecords = pgTable("attendance_records", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   streamSessionId: text("stream_session_id").notNull(),
+  streamTitle: text("stream_title").notNull(),
   startTime: text("start_time").notNull(),
   endTime: text("end_time"),
   lastSeenAt: text("last_seen_at").notNull(),
@@ -24,6 +25,7 @@ export const insertAttendanceRecordSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   streamSessionId: z.string().min(1),
+  streamTitle: z.string().min(1),
   startTime: z.string(),
   endTime: z.string().optional(),
   durationSeconds: z.number().int().min(0),
@@ -33,6 +35,7 @@ export const heartbeatAttendanceSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   streamSessionId: z.string().min(1),
+  streamTitle: z.string().min(1),
   startTime: z.string(),
   durationSeconds: z.number().int().min(0),
 });

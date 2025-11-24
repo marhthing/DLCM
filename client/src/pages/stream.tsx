@@ -95,20 +95,23 @@ export default function Stream() {
     return null;
   };
 
-  // Generate stream session ID from video ID + date
-  const generateStreamSessionId = (videoId: string): string => {
+  // Generate stream session ID from video ID + date + stream title
+  const generateStreamSessionId = (videoId: string, title: string): string => {
     const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
-    return `${videoId}_${today}`;
+    // Sanitize title to create a clean session ID
+    const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    return `${videoId}_${today}_${sanitizedTitle}`;
   };
 
   // Send heartbeat to update attendance with explicit parameters to avoid closure issues
-  const sendHeartbeat = async (params?: { name: string; email: string; streamSessionId: string; startTime: number }) => {
+  const sendHeartbeat = async (params?: { name: string; email: string; streamSessionId: string; streamTitle: string; startTime: number }) => {
     if (!isStreamLive) return;
 
     // Use provided params or fallback to current values
     const name = params?.name || user?.name;
     const email = params?.email || user?.email;
     const sessionId = params?.streamSessionId || streamSessionIdRef.current;
+    const title = params?.streamTitle || streamTitle || 'Live Stream';
     const startTime = params?.startTime || currentStartTimeRef.current || user?.startTime || Date.now();
 
     if (!name || !email || !sessionId) {
@@ -125,6 +128,7 @@ export default function Stream() {
           name,
           email,
           streamSessionId: sessionId,
+          streamTitle: title,
           startTime: new Date(startTime).toISOString(),
           durationSeconds,
         }),
@@ -143,7 +147,7 @@ export default function Stream() {
     const videoId = extractVideoId(streamSettings.youtubeUrl);
     if (!videoId) return;
 
-    const newStreamSessionId = generateStreamSessionId(videoId);
+    const newStreamSessionId = generateStreamSessionId(videoId, streamTitle || 'LiveStream');
     
     // Check if this is a new stream session
     const isNewSession = !streamSessionIdRef.current || 
@@ -155,6 +159,7 @@ export default function Stream() {
       name: user.name,
       email: user.email,
       streamSessionId: newStreamSessionId,
+      streamTitle: streamTitle || 'Live Stream',
       startTime: 0, // Will be set below
     };
     
@@ -213,6 +218,7 @@ export default function Stream() {
       name: user.name,
       email: user.email,
       streamSessionId: streamSessionIdRef.current,
+      streamTitle: streamTitle || 'Live Stream',
       startTime: new Date(startTime).toISOString(),
       durationSeconds,
     };

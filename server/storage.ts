@@ -5,7 +5,7 @@ export interface IStorage {
   // Attendance Records
   getAttendanceRecords(): Promise<AttendanceRecord[]>;
   createAttendanceRecord(record: InsertAttendanceRecord): Promise<AttendanceRecord>;
-  upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord>;
+  upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; streamTitle: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord>;
 
   // Stream Settings
   getStreamSettings(): Promise<StreamSettings | undefined>;
@@ -40,7 +40,7 @@ export class MemStorage implements IStorage {
     return record;
   }
 
-  async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
+  async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; streamTitle: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
     // Find existing record for this email and stream session
     const existing = Array.from(this.attendanceRecords.values()).find(
       r => r.email === email && r.streamSessionId === streamSessionId
@@ -51,6 +51,7 @@ export class MemStorage implements IStorage {
       const updated: AttendanceRecord = {
         ...existing,
         name: data.name,
+        streamTitle: data.streamTitle,
         durationSeconds: data.durationSeconds,
         lastSeenAt: new Date().toISOString(),
       };
@@ -65,6 +66,7 @@ export class MemStorage implements IStorage {
       name: data.name,
       email,
       streamSessionId,
+      streamTitle: data.streamTitle,
       startTime: data.startTime,
       endTime: undefined,
       lastSeenAt: new Date().toISOString(),

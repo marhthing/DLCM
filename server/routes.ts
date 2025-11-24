@@ -71,13 +71,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid request", errors: result.error.errors });
       }
 
-      const { email, streamSessionId, name, startTime, durationSeconds } = result.data;
+      const { email, streamSessionId, name, streamTitle, startTime, durationSeconds } = result.data;
       
       // Update active viewers
       activeViewers.set(email, Date.now());
       
       const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
         name,
+        streamTitle,
         startTime,
         durationSeconds,
       });

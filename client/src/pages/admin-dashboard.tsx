@@ -10,11 +10,23 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { AttendanceRecord, StreamSettings } from "@shared/schema";
+import { format } from "date-fns";
+
+// Helper function to format duration
+const formatDuration = (durationSeconds: number): string => {
+  const minutes = Math.floor(durationSeconds / 60);
+  const seconds = durationSeconds % 60;
+  return `${minutes} mins ${seconds} secs`;
+};
 
 export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const [newYoutubeUrl, setNewYoutubeUrl] = useState("");
   const { toast } = useToast();
+
+  // Filtering state
+  const [filterDate, setFilterDate] = useState("");
+  const [filterTitle, setFilterTitle] = useState("");
 
   useEffect(() => {
     const isAdmin = localStorage.getItem("adminAuth");
@@ -29,6 +41,17 @@ export default function AdminDashboard() {
 
   const { data: streamSettings } = useQuery<StreamSettings>({
     queryKey: ["/api/stream/settings"],
+  });
+
+  // Derived state for unique stream titles
+  const uniqueTitles = Array.from(new Set(attendanceRecords.map(record => record.streamTitle))).sort();
+
+  // Filtered records based on state
+  const filteredRecords = attendanceRecords.filter(record => {
+    const recordDate = format(new Date(record.startTime), 'yyyy-MM-dd');
+    const dateMatch = filterDate ? recordDate === filterDate : true;
+    const titleMatch = filterTitle ? record.streamTitle === filterTitle : true;
+    return dateMatch && titleMatch;
   });
 
   const updateUrlMutation = useMutation({
@@ -74,30 +97,33 @@ export default function AdminDashboard() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Name", "Email", "Date", "Time", "Duration"];
-    const rows = attendanceRecords.map((r) => {
-      const date = new Date(r.timestamp);
-      const duration = `${Math.floor(r.durationSeconds / 60)} mins ${r.durationSeconds % 60} secs`;
-      return [
-        r.name,
-        r.email,
-        date.toLocaleDateString(),
-        date.toLocaleTimeString(),
-        duration,
-      ];
-    });
+    const recordsToExport = filteredRecords.length > 0 ? filteredRecords : attendanceRecords;
+    const csvContent = [
+      ['Name', 'Email', 'Service', 'Date', 'Start Time', 'Duration (minutes)'],
+      ...recordsToExport.map(record => [
+        record.name,
+        record.email,
+        record.streamTitle,
+        format(new Date(record.startTime), 'MMM dd, yyyy'),
+        format(new Date(record.startTime), 'h:mm a'),
+        Math.round(record.durationSeconds / 60).toString(),
+      ]),
+    ]
+      .map(row => row.join(','))
+      .join('\n');
 
-    let csv = headers.join(",") + "\n";
-    rows.forEach((row) => {
-      csv += row.join(",") + "\n";
-    });
-
-    const blob = new Blob([csv], { type: "text/csv" });
+    const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = `attendance-${new Date().toISOString().split("T")[0]}.csv`;
+    a.download = `attendance-records-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast({
+      title: "Export successful",
+      description: `${recordsToExport.length} attendance records have been exported to CSV`,
+    });
   };
 
   return (
@@ -162,24 +188,12 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader>
-            <div className="flex flex-wrap justify-between items-center gap-4">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="text-primary" data-testid="icon-users" />
-                <span data-testid="text-records-count">
-                  Attendance Records ({attendanceRecords.length})
-                </span>
-              </CardTitle>
-              <Button
-                data-testid="button-export-csv"
-                onClick={exportToCSV}
-                disabled={attendanceRecords.length === 0}
-                variant="outline"
-                size="sm"
-              >
-                <Download className="mr-2 h-4 w-4" data-testid="icon-download" />
-                Export CSV
-              </Button>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="text-primary" data-testid="icon-users" />
+              <span data-testid="text-records-count">
+                Attendance Records ({attendanceRecords.length})
+              </span>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {isLoadingRecords ? (
@@ -191,34 +205,88 @@ export default function AdminDashboard() {
                 No attendance records yet
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead data-testid="header-name">Name</TableHead>
-                      <TableHead data-testid="header-email">Email</TableHead>
-                      <TableHead data-testid="header-date">Date</TableHead>
-                      <TableHead data-testid="header-time">Time</TableHead>
-                      <TableHead data-testid="header-duration">Duration</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {attendanceRecords.map((record) => {
-                      const date = new Date(record.timestamp);
-                      const duration = `${Math.floor(record.durationSeconds / 60)} mins ${record.durationSeconds % 60} secs`;
-                      return (
+              <>
+                <div className="mb-4 flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[200px]">
+                    <Label htmlFor="filter-date">Filter by Date</Label>
+                    <Input
+                      id="filter-date"
+                      type="date"
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <Label htmlFor="filter-title">Filter by Service</Label>
+                    <select
+                      id="filter-title"
+                      value={filterTitle}
+                      onChange={(e) => setFilterTitle(e.target.value)}
+                      className="mt-1 w-full h-10 px-3 rounded-md border border-input bg-background"
+                    >
+                      <option value="">All Services</option>
+                      {uniqueTitles.map(title => (
+                        <option key={title} value={title}>{title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setFilterDate("");
+                      setFilterTitle("");
+                    }}
+                    variant="outline"
+                  >
+                    Clear Filters
+                  </Button>
+                  <Button
+                    data-testid="button-export-csv"
+                    onClick={exportToCSV}
+                    disabled={attendanceRecords.length === 0}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Download className="mr-2 h-4 w-4" data-testid="icon-download" />
+                    Export CSV
+                  </Button>
+                </div>
+                <div className="mb-2 text-sm text-muted-foreground">
+                  Showing {filteredRecords.length} of {attendanceRecords.length} records
+                </div>
+                <div className="border rounded-lg overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Service</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Start Time</TableHead>
+                        <TableHead>Duration</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRecords.map((record) => (
                         <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
-                          <TableCell data-testid={`cell-name-${record.id}`}>{record.name}</TableCell>
-                          <TableCell data-testid={`cell-email-${record.id}`}>{record.email}</TableCell>
-                          <TableCell data-testid={`cell-date-${record.id}`}>{date.toLocaleDateString()}</TableCell>
-                          <TableCell data-testid={`cell-time-${record.id}`}>{date.toLocaleTimeString()}</TableCell>
-                          <TableCell data-testid={`cell-duration-${record.id}`}>{duration}</TableCell>
+                          <TableCell className="font-medium">{record.name}</TableCell>
+                          <TableCell>{record.email}</TableCell>
+                          <TableCell className="font-medium">{record.streamTitle}</TableCell>
+                          <TableCell>
+                            {format(new Date(record.startTime), 'MMM dd, yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(record.startTime), 'h:mm a')}
+                          </TableCell>
+                          <TableCell>
+                            {formatDuration(record.durationSeconds)}
+                          </TableCell>
                         </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

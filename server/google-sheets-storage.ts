@@ -100,32 +100,32 @@ export class GoogleSheetsStorage implements IStorage {
         // Add headers
         await sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${this.attendanceSheetName}!A1:I1`,
+          range: `${this.attendanceSheetName}!A1:J1`,
           valueInputOption: 'RAW',
           requestBody: {
-            values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
+            values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Stream Title', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
           },
         });
       } else {
-        // Check if we need to migrate from old schema (7 columns) to new schema (9 columns)
+        // Check if we need to migrate from old schema to new schema
         const headerResponse = await sheets.spreadsheets.values.get({
           spreadsheetId: this.spreadsheetId,
-          range: `${this.attendanceSheetName}!A1:I1`,
+          range: `${this.attendanceSheetName}!A1:J1`,
         });
 
         const headers = headerResponse.data.values?.[0] || [];
         
-        // If we have old 7-column format, migrate to new 9-column format
+        // Migrate from 7-column format to 10-column format
         if (headers.length === 7 && !headers.includes('Stream Session ID')) {
           console.log('Migrating Attendance Records sheet from old schema to new schema...');
           
           // Update headers
           await sheets.spreadsheets.values.update({
             spreadsheetId: this.spreadsheetId,
-            range: `${this.attendanceSheetName}!A1:I1`,
+            range: `${this.attendanceSheetName}!A1:J1`,
             valueInputOption: 'RAW',
             requestBody: {
-              values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
+              values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Stream Title', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
             },
           });
 
@@ -138,9 +138,8 @@ export class GoogleSheetsStorage implements IStorage {
           const oldRows = dataResponse.data.values || [];
           
           if (oldRows.length > 0) {
-            // Migrate each row: backfill streamSessionId with a unique identifier to prevent collisions
+            // Migrate each row: backfill streamSessionId and streamTitle
             const migratedRows = oldRows.map((row, index) => {
-              // Use row ID if available, otherwise use row index for truly unique legacy session ID
               const rowId = row[0] || `row${index}`;
               const legacySessionId = `legacy-${rowId}`;
               
@@ -148,10 +147,11 @@ export class GoogleSheetsStorage implements IStorage {
                 row[0] || '', // ID
                 row[1] || '', // Name
                 row[2] || '', // Email
-                legacySessionId, // Stream Session ID (backfilled with unique legacy placeholder)
+                legacySessionId, // Stream Session ID (backfilled)
+                'Legacy Service', // Stream Title (backfilled)
                 row[3] || '', // Start Time
                 row[4] || '', // End Time
-                row[4] || new Date().toISOString(), // Last Seen At (use endTime or now)
+                row[4] || new Date().toISOString(), // Last Seen At
                 row[5] || '0', // Duration (seconds)
                 row[6] || '', // Timestamp
               ];
@@ -160,7 +160,7 @@ export class GoogleSheetsStorage implements IStorage {
             // Write migrated data back
             await sheets.spreadsheets.values.update({
               spreadsheetId: this.spreadsheetId,
-              range: `${this.attendanceSheetName}!A2:I${oldRows.length + 1}`,
+              range: `${this.attendanceSheetName}!A2:J${oldRows.length + 1}`,
               valueInputOption: 'RAW',
               requestBody: {
                 values: migratedRows,
@@ -170,6 +170,60 @@ export class GoogleSheetsStorage implements IStorage {
             console.log(`Migrated ${oldRows.length} attendance records to new schema.`);
           }
         }
+        
+        // Migrate from 9-column format to 10-column format (add streamTitle)
+        else if (headers.length === 9 && !headers.includes('Stream Title')) {
+          console.log('Migrating Attendance Records sheet to include Stream Title...');
+          
+          // Update headers
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.attendanceSheetName}!A1:J1`,
+            valueInputOption: 'RAW',
+            requestBody: {
+              values: [['ID', 'Name', 'Email', 'Stream Session ID', 'Stream Title', 'Start Time', 'End Time', 'Last Seen At', 'Duration (seconds)', 'Timestamp']],
+            },
+          });
+
+          // Get all existing data rows
+          const dataResponse = await sheets.spreadsheets.values.get({
+            spreadsheetId: this.spreadsheetId,
+            range: `${this.attendanceSheetName}!A2:I`,
+          });
+
+          const oldRows = dataResponse.data.values || [];
+          
+          if (oldRows.length > 0) {
+            // Add streamTitle column (backfill with "Live Service")
+            const migratedRows = oldRows.map((row) => {
+              return [
+                row[0] || '', // ID
+                row[1] || '', // Name
+                row[2] || '', // Email
+                row[3] || '', // Stream Session ID
+                'Live Service', // Stream Title (backfilled)
+                row[4] || '', // Start Time
+                row[5] || '', // End Time
+                row[6] || '', // Last Seen At
+                row[7] || '0', // Duration (seconds)
+                row[8] || '', // Timestamp
+              ];
+            });
+
+            // Write migrated data back
+            await sheets.spreadsheets.values.update({
+              spreadsheetId: this.spreadsheetId,
+              range: `${this.attendanceSheetName}!A2:J${oldRows.length + 1}`,
+              valueInputOption: 'RAW',
+              requestBody: {
+                values: migratedRows,
+              },
+            });
+
+            console.log(`Migrated ${oldRows.length} attendance records to include Stream Title.`);
+          }
+        }
+      }
       }
 
       // Create Stream Settings sheet if it doesn't exist
@@ -211,7 +265,7 @@ export class GoogleSheetsStorage implements IStorage {
       
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:I`,
+        range: `${this.attendanceSheetName}!A2:J`,
       });
 
       const rows = response.data.values || [];
@@ -221,11 +275,12 @@ export class GoogleSheetsStorage implements IStorage {
         name: row[1] || '',
         email: row[2] || '',
         streamSessionId: row[3] || '',
-        startTime: row[4] || '',
-        endTime: row[5] || '',
-        lastSeenAt: row[6] || '',
-        durationSeconds: parseInt(row[7] || '0', 10),
-        timestamp: row[8] || '',
+        streamTitle: row[4] || 'Live Service',
+        startTime: row[5] || '',
+        endTime: row[6] || '',
+        lastSeenAt: row[7] || '',
+        durationSeconds: parseInt(row[8] || '0', 10),
+        timestamp: row[9] || '',
       })).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     } catch (error) {
       console.error('Error fetching attendance records:', error);
@@ -244,6 +299,7 @@ export class GoogleSheetsStorage implements IStorage {
       name: insertRecord.name,
       email: insertRecord.email,
       streamSessionId: insertRecord.streamSessionId,
+      streamTitle: insertRecord.streamTitle,
       startTime: insertRecord.startTime,
       endTime: insertRecord.endTime,
       lastSeenAt,
@@ -256,7 +312,7 @@ export class GoogleSheetsStorage implements IStorage {
       
       await sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:I`,
+        range: `${this.attendanceSheetName}!A2:J`,
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
@@ -264,6 +320,7 @@ export class GoogleSheetsStorage implements IStorage {
             record.name,
             record.email,
             record.streamSessionId,
+            record.streamTitle,
             record.startTime,
             record.endTime || '',
             record.lastSeenAt,
@@ -280,7 +337,7 @@ export class GoogleSheetsStorage implements IStorage {
     }
   }
 
-  async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
+  async upsertAttendanceRecord(email: string, streamSessionId: string, data: { name: string; streamTitle: string; startTime: string; durationSeconds: number }): Promise<AttendanceRecord> {
     await this.initPromise;
     
     try {
@@ -289,7 +346,7 @@ export class GoogleSheetsStorage implements IStorage {
       // Fetch all records to find existing one
       const response = await sheets.spreadsheets.values.get({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:I`,
+        range: `${this.attendanceSheetName}!A2:J`,
       });
 
       const rows = response.data.values || [];
@@ -306,18 +363,16 @@ export class GoogleSheetsStorage implements IStorage {
             name: row[1] || '',
             email: row[2] || '',
             streamSessionId: row[3] || '',
-            startTime: row[4] || '',
-            endTime: row[5] || '',
-            lastSeenAt: row[6] || '',
-            durationSeconds: parseInt(row[7] || '0', 10),
-            timestamp: row[8] || '',
+            streamTitle: row[4] || 'Live Service',
+            startTime: row[5] || '',
+            endTime: row[6] || '',
+            lastSeenAt: row[7] || '',
+            durationSeconds: parseInt(row[8] || '0', 10),
+            timestamp: row[9] || '',
           };
           break;
         }
       }
-
-      // No legacy fallback - only match by exact streamSessionId
-      // Legacy records are preserved as historical data with their own unique streamSessionId
 
       if (existingRecord && existingRowIndex > 0) {
         // Update existing record
@@ -325,13 +380,14 @@ export class GoogleSheetsStorage implements IStorage {
         const updated: AttendanceRecord = {
           ...existingRecord,
           name: data.name,
+          streamTitle: data.streamTitle,
           durationSeconds: data.durationSeconds,
           lastSeenAt,
         };
 
         await sheets.spreadsheets.values.update({
           spreadsheetId: this.spreadsheetId,
-          range: `${this.attendanceSheetName}!A${existingRowIndex}:I${existingRowIndex}`,
+          range: `${this.attendanceSheetName}!A${existingRowIndex}:J${existingRowIndex}`,
           valueInputOption: 'RAW',
           requestBody: {
             values: [[
@@ -339,6 +395,7 @@ export class GoogleSheetsStorage implements IStorage {
               updated.name,
               updated.email,
               updated.streamSessionId,
+              updated.streamTitle,
               updated.startTime,
               updated.endTime || '',
               updated.lastSeenAt,
@@ -361,6 +418,7 @@ export class GoogleSheetsStorage implements IStorage {
         name: data.name,
         email,
         streamSessionId,
+        streamTitle: data.streamTitle,
         startTime: data.startTime,
         endTime: undefined,
         lastSeenAt,
@@ -370,7 +428,7 @@ export class GoogleSheetsStorage implements IStorage {
 
       await sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `${this.attendanceSheetName}!A2:I`,
+        range: `${this.attendanceSheetName}!A2:J`,
         valueInputOption: 'RAW',
         requestBody: {
           values: [[
@@ -378,6 +436,7 @@ export class GoogleSheetsStorage implements IStorage {
             record.name,
             record.email,
             record.streamSessionId,
+            record.streamTitle,
             record.startTime,
             record.endTime || '',
             record.lastSeenAt,
