@@ -318,11 +318,27 @@ export default function Stream() {
     <div className="min-h-screen bg-gray-900 dark:bg-black">
       <div className="bg-gray-800 dark:bg-gray-950 border-b border-gray-700 dark:border-gray-800 px-6 py-4">
         <div className="max-w-7xl mx-auto space-y-3">
+          <div className="flex items-center justify-center gap-3 pb-3 border-b border-gray-700">
+            <img 
+              src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
+              alt="Deeper Life Bible Church Logo" 
+              className="h-12 w-12 md:h-16 md:w-16 object-contain"
+            />
+            <div className="text-center">
+              <h1 className="text-lg md:text-xl font-bold text-white">
+                Deeper Life Bible Church
+              </h1>
+              <p className="text-sm md:text-base text-gray-300">
+                Pontypridd Region
+              </p>
+            </div>
+          </div>
+          
           {streamTitle && (
             <div className="flex items-center justify-center gap-2 pb-2 border-b border-gray-700">
-              <h1 className="text-xl md:text-2xl font-bold text-white text-center" data-testid="text-stream-title">
+              <h2 className="text-lg md:text-xl font-semibold text-white text-center" data-testid="text-stream-title">
                 {streamTitle}
-              </h1>
+              </h2>
             </div>
           )}
           
