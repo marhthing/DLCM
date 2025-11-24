@@ -3,22 +3,22 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, CheckCircle, AlertCircle, Timer, Users } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Clock, Users, Timer } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
 
 export default function StreamPage() {
   const router = useRouter()
   const [user, setUser] = useState<{ name: string; email: string; startTime: number; lastStreamSessionId?: string } | null>(null)
   const [streamSettings, setStreamSettings] = useState<any>(null)
-  const [isStreamLive, setIsStreamLive] = useState(false)
-  const [checkingLiveStatus, setCheckingLiveStatus] = useState(true)
+  const [isStreamLive, setIsStreamLive] = useState(true)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [iframeLoading, setIframeLoading] = useState(true)
   const [activeViewersCount, setActiveViewersCount] = useState(0)
-  const [streamTitle, setStreamTitle] = useState('')
+  const [streamTitle, setStreamTitle] = useState('Live Service')
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
 
@@ -28,19 +28,29 @@ export default function StreamPage() {
       router.push('/')
       return
     }
-    setUser(JSON.parse(storedUser))
+    const parsedUser = JSON.parse(storedUser)
+    setUser(parsedUser)
     
     // Fetch stream settings
     fetch('/api/stream/settings')
       .then(res => res.json())
-      .then(data => setStreamSettings(data))
+      .then(data => {
+        setStreamSettings(data)
+        if (data.youtubeUrl) {
+          const videoId = extractVideoId(data.youtubeUrl)
+          if (videoId) {
+            fetchStreamTitle(videoId)
+          }
+        }
+      })
       .catch(console.error)
   }, [router])
 
   const extractVideoId = (url: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\s?]+)/,
-      /youtube\.com\/live\/([^&\s?]+)/
+      /youtube\.com\/live\/([^&\s?]+)/,
+      /youtube\.com\/channel\/([^\/]+)\/live/
     ]
     for (const pattern of patterns) {
       const match = url.match(pattern)
@@ -49,34 +59,102 @@ export default function StreamPage() {
     return null
   }
 
+  const fetchStreamTitle = async (videoId: string) => {
+    try {
+      const response = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
+      const data = await response.json()
+      if (data.title) {
+        setStreamTitle(data.title)
+      }
+    } catch (error) {
+      console.error('Failed to fetch stream title:', error)
+    }
+  }
+
   const generateStreamSessionId = (videoId: string, title: string): string => {
     const today = new Date().toISOString().split('T')[0]
     const sanitizedTitle = title.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50)
     return `${videoId}_${today}_${sanitizedTitle}`
   }
 
-  const sendHeartbeat = async (params?: any) => {
-    if (!isStreamLive) return
-    const name = params?.name || user?.name
-    const email = params?.email || user?.email
-    const sessionId = params?.streamSessionId || streamSessionIdRef.current
-    const title = params?.streamTitle || streamTitle || 'Live Stream'
-    const startTime = params?.startTime || currentStartTimeRef.current || user?.startTime || Date.now()
+  useEffect(() => {
+    if (!streamSettings?.youtubeUrl || !user) return
 
-    if (!name || !email || !sessionId) return
+    const videoId = extractVideoId(streamSettings.youtubeUrl)
+    if (!videoId) return
 
-    const durationSeconds = Math.floor((Date.now() - startTime) / 1000)
+    const sessionId = generateStreamSessionId(videoId, streamTitle)
+    streamSessionIdRef.current = sessionId
+
+    // Check if this is a new session
+    const isNewSession = !user.lastStreamSessionId || user.lastStreamSessionId !== sessionId
+    
+    if (isNewSession) {
+      // New session - reset start time
+      const newStartTime = Date.now()
+      currentStartTimeRef.current = newStartTime
+      
+      const updatedUser = {
+        ...user,
+        startTime: newStartTime,
+        lastStreamSessionId: sessionId
+      }
+      setUser(updatedUser)
+      localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+    } else {
+      // Continuing same session - use existing start time
+      currentStartTimeRef.current = user.startTime
+    }
+
+    // Start heartbeat interval (30 seconds)
+    heartbeatIntervalRef.current = setInterval(() => {
+      sendHeartbeat()
+    }, 30000)
+
+    // Initial heartbeat
+    sendHeartbeat()
+
+    // Start timer
+    timerIntervalRef.current = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
+    }, 1000)
+
+    // Fetch active viewers count
+    const fetchActiveViewers = () => {
+      fetch('/api/attendance/active-count')
+        .then(res => res.json())
+        .then(data => setActiveViewersCount(data.count || 0))
+        .catch(console.error)
+    }
+    fetchActiveViewers()
+    activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 10000)
+
+    // Cleanup on unmount
+    return () => {
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+      if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
+      
+      // Send final heartbeat using sendBeacon
+      sendFinalHeartbeat()
+    }
+  }, [streamSettings, user, streamTitle])
+
+  const sendHeartbeat = async () => {
+    if (!user || !streamSessionIdRef.current) return
+
+    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
     
     try {
       await fetch('/api/attendance/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          email,
-          streamSessionId: sessionId,
-          streamTitle: title,
-          startTime: new Date(startTime).toISOString(),
+          name: user.name,
+          email: user.email,
+          streamSessionId: streamSessionIdRef.current,
+          streamTitle: streamTitle,
+          startTime: new Date(currentStartTimeRef.current).toISOString(),
           durationSeconds,
         }),
       })
@@ -84,6 +162,49 @@ export default function StreamPage() {
       console.error('Heartbeat failed:', error)
     }
   }
+
+  const sendFinalHeartbeat = () => {
+    if (!user || !streamSessionIdRef.current) return
+
+    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
+    
+    const payload = JSON.stringify({
+      name: user.name,
+      email: user.email,
+      streamSessionId: streamSessionIdRef.current,
+      streamTitle: streamTitle,
+      startTime: new Date(currentStartTimeRef.current).toISOString(),
+      durationSeconds,
+    })
+
+    // Use sendBeacon for reliability on page unload
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon('/api/attendance/heartbeat', payload)
+    }
+  }
+
+  // Listen for page unload events
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sendFinalHeartbeat()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        sendFinalHeartbeat()
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   const formatDuration = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600)
@@ -111,6 +232,50 @@ export default function StreamPage() {
               <p className="text-xs sm:text-base text-gray-300">Pontypridd Region</p>
             </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Card className="bg-gray-700 border-gray-600">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
+                  <div>
+                    <p className="text-xs text-gray-400">Started</p>
+                    <p className="text-sm sm:text-base font-semibold text-white">
+                      {format(new Date(currentStartTimeRef.current), 'h:mm a')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-700 border-gray-600">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Timer className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
+                  <div>
+                    <p className="text-xs text-gray-400">Duration</p>
+                    <p className="text-sm sm:text-base font-semibold text-white">
+                      {formatDuration(elapsedSeconds)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-700 border-gray-600">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-purple-400" />
+                  <div>
+                    <p className="text-xs text-gray-400">Watching Now</p>
+                    <p className="text-sm sm:text-base font-semibold text-white">
+                      {activeViewersCount} {activeViewersCount === 1 ? 'viewer' : 'viewers'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
@@ -135,6 +300,22 @@ export default function StreamPage() {
             onLoad={() => setIframeLoading(false)}
           />
         </div>
+
+        <Card className="mt-4 bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-400">Viewing as</p>
+                <p className="text-lg font-semibold text-white">{user.name}</p>
+                <p className="text-sm text-gray-400">{user.email}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">Session</p>
+                <p className="text-lg font-semibold text-white">{streamTitle}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
