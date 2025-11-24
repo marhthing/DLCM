@@ -12,9 +12,14 @@ A web application that allows church members to watch live-streamed services and
 Production-ready MVP with all core features implemented and functional.
 
 ## Recent Changes (November 24, 2025)
+- **LATEST**: Migrated from in-memory/Supabase to Google Sheets storage with race-condition-safe initialization
+- **LATEST**: Implemented heartbeat-based attendance system (30-second intervals) to prevent auto-refresh issues
+- **LATEST**: Added session-based tracking with streamSessionId (videoId + date) for preventing duplicate records
+- **LATEST**: Real-time UI showing start time, elapsed duration, and remaining time with live counters
+- **LATEST**: Auto-migration system for backward compatibility (upgrades old 7-column sheets to 9-column format)
+- **LATEST**: Fixed start time accuracy using refs and explicit parameter passing to avoid closure capture
 - Initial implementation of the church attendance tracking system
 - Four main pages: User Login, Stream Viewer, Admin Login, Admin Dashboard
-- In-memory storage for attendance records
 - YouTube stream URL management
 - CSV export functionality for attendance data
 
@@ -40,39 +45,58 @@ Production-ready MVP with all core features implemented and functional.
 - **POST `/api/admin/login`** - Authenticate admin user
 
 ### Data Models
-- **AttendanceRecord**: name, email, startTime, endTime, durationSeconds, timestamp
+- **AttendanceRecord**: id, name, email, streamSessionId, startTime, endTime, lastSeenAt, durationSeconds, timestamp
 - **StreamSettings**: youtubeUrl, updatedAt
-- **ViewerSession**: name, email (stored in localStorage)
+- **ViewerSession**: name, email, startTime, lastStreamSessionId (stored in localStorage)
 
 ### Storage
-- In-memory storage (MemStorage) for development
-- Data persists during server runtime
-- Can be upgraded to PostgreSQL for production persistence
+- **Google Sheets** (primary) with automatic schema migration and upsert logic
+  - Auto-detects old 7-column format and upgrades to 9-column format
+  - Backfills legacy records with unique `legacy-${rowId}` session IDs
+  - Session-based deduplication: matches by email + streamSessionId
+- In-memory storage (MemStorage) available as fallback
+- Requires GOOGLE_SPREADSHEET_ID environment variable for Sheets integration
 
 ## Key Features
 1. **No-friction user entry** - Just name and email, no password required
-2. **Automatic attendance tracking** - Tracks viewing duration from join to leave
-3. **YouTube stream integration** - Supports multiple URL formats (watch, short links, embed)
-4. **Admin controls** - Update stream URL, view all attendance records
-5. **CSV export** - Download attendance data for external processing
-6. **Responsive design** - Works on mobile, tablet, and desktop
-7. **SEO optimized** - Proper meta tags for search engines and social sharing
+2. **Heartbeat-based tracking** - 30-second intervals prevent auto-refresh, updates duration live
+3. **Session-based deduplication** - Same user + same stream + same day = UPDATE (not duplicate)
+4. **Real-time UI** - Shows formatted start time (h:mm a) and live duration counter (Xh Xm Xs)
+5. **Automatic session detection** - New stream or new day creates new record; same session updates existing
+6. **YouTube stream integration** - Supports multiple URL formats (watch, short links, embed)
+7. **Admin controls** - Update stream URL, view all attendance records
+8. **CSV export** - Download attendance data for external processing
+9. **Google Sheets storage** - All data persists in user's own spreadsheet with automatic schema migration
+10. **Responsive design** - Works on mobile, tablet, and desktop
+11. **SEO optimized** - Proper meta tags for search engines and social sharing
 
 ## User Journeys
 ### Viewer Flow
 1. Visit home page → Enter name and email → Join stream
-2. Watch service (attendance tracked automatically)
-3. Close tab when done (attendance recorded with duration)
+2. Watch service (heartbeat sends update every 30 seconds)
+3. See real-time start time and duration counter on screen
+4. Close tab when done (final attendance sent via sendBeacon)
+5. Return to same stream: existing record updates (no duplicate created)
+6. Join different stream or different day: new record created
 
 ### Admin Flow
 1. Click "Admin Access" → Enter password (`admin123`)
-2. View dashboard with attendance records
+2. View dashboard with attendance records from Google Sheets
 3. Update YouTube stream URL as needed
 4. Export attendance to CSV for records
 
 ## Technical Notes
-- Uses localStorage to persist user session across page refreshes
-- beforeunload event captures viewing duration on tab close
+- **Session Management**: localStorage persists user data + lastStreamSessionId across refreshes
+- **Heartbeat System**: 30-second intervals update attendance without causing page refreshes
+- **Session ID Format**: `${videoId}_${YYYY-MM-DD}` uniquely identifies each stream session
+- **Start Time Accuracy**: Uses refs and explicit parameters to avoid React closure capture issues
+- **Final Flush**: sendBeacon on beforeunload/pagehide/visibilitychange ensures last update
+- **Auto-Migration**: Google Sheets storage automatically detects and upgrades old 7-column format
+- **Legacy Preservation**: Old records backfilled with `legacy-${rowId}` session IDs, never overwritten
+- **Upsert Logic**: Matches by exact streamSessionId only (no legacy fallback)
 - YouTube URLs automatically converted to embed format
 - Dark theme on stream page for comfortable viewing
 - Gradient backgrounds on login pages for visual appeal
+
+## Environment Variables Required
+- `GOOGLE_SPREADSHEET_ID`: ID of the Google Sheet for attendance data (required for production)
