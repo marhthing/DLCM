@@ -224,7 +224,7 @@ export default function StreamPage() {
                 className="h-8 w-8 flex-shrink-0"
               />
               <div className="min-w-0 hidden sm:block">
-                <h1 className="text-xs font-semibold text-white truncate">DLBC Pontypridd</h1>
+                <h1 className="text-xs font-semibold text-white truncate">DLBC Pontypridd - Streaming Platform</h1>
               </div>
             </div>
 

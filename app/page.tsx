@@ -34,7 +34,7 @@ export default function LoginPage() {
           </div>
           <div>
             <CardTitle className="text-3xl font-bold mb-2">Deeper Life Bible Church</CardTitle>
-            <CardDescription className="text-base font-medium">Pontypridd Region</CardDescription>
+            <CardDescription className="text-base font-medium">Pontypridd Region - Streaming Platform</CardDescription>
             <CardDescription className="text-sm mt-2">
               Sign in to watch and record your attendance
             </CardDescription>
