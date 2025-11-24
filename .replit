@@ -22,7 +22,7 @@ externalPort = 3000
 PORT = "5000"
 
 [workflows]
-runButton = "Project"
+runButton = "Start Next.js App"
 
 [[workflows.workflow]]
 name = "Project"
@@ -41,6 +41,15 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Start Next.js App"
+author = 50166187
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
 
 [agent]
 integrations = ["javascript_mem_db:1.0.0", "google-sheet:1.0.0"]
