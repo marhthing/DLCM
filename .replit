@@ -44,3 +44,9 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_mem_db:1.0.0", "google-sheet:1.0.0"]
+expertMode = true
+
+[userenv]
+
+[userenv.shared]
+GOOGLE_SPREADSHEET_ID = "136nv8bMAztfofh_vRNRzEh_ARd7VOWV6PUXSe6a584I"
