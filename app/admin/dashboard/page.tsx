@@ -125,43 +125,195 @@ export default function AdminDashboard() {
     
     const doc = new jsPDF()
     
-    // Add title
-    doc.setFontSize(18)
-    doc.text('Attendance Records', 14, 20)
+    // Load and add church logo
+    const logoUrl = 'https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png'
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.src = logoUrl
     
-    // Add subtitle with church name
-    doc.setFontSize(12)
-    doc.text('Deeper Life Bible Church - Pontypridd Region', 14, 28)
+    img.onload = () => {
+      // Add header background
+      doc.setFillColor(13, 71, 161) // Deep blue color
+      doc.rect(0, 0, 210, 45, 'F')
+      
+      // Add logo
+      doc.addImage(img, 'PNG', 14, 8, 30, 30)
+      
+      // Add church name and title in white
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('DEEPER LIFE BIBLE CHURCH', 50, 18)
+      
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Pontypridd Region', 50, 26)
+      
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ATTENDANCE RECORDS', 50, 37)
+      
+      // Add decorative line
+      doc.setDrawColor(255, 255, 255)
+      doc.setLineWidth(0.5)
+      doc.line(14, 42, 196, 42)
+      
+      // Reset text color for body
+      doc.setTextColor(0, 0, 0)
+      
+      // Add document info
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy')} at ${format(new Date(), 'h:mm a')}`, 14, 52)
+      doc.text(`Total Records: ${recordsToExport.length}`, 14, 58)
+      
+      // Prepare table data
+      const tableData = recordsToExport.map((record, index) => [
+        (index + 1).toString(),
+        record.name,
+        record.email,
+        record.streamTitle,
+        format(new Date(record.startTime), 'MMM dd, yyyy'),
+      ])
+      
+      // Add table
+      autoTable(doc, {
+        head: [['S/N', 'Name', 'Email', 'Service', 'Date']],
+        body: tableData,
+        startY: 65,
+        styles: { 
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161], // Match header color
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 15 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 50 },
+          4: { halign: 'center', cellWidth: 30 },
+        },
+      })
+      
+      // Add footer on last page
+      const pageCount = (doc as any).internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(128, 128, 128)
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        )
+        doc.text(
+          'Deeper Life Bible Church - Pontypridd Region',
+          14,
+          doc.internal.pageSize.height - 10
+        )
+      }
+      
+      // Save the PDF
+      doc.save(`DLBC-Pontypridd-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      
+      toast({
+        title: 'Export successful',
+        description: `${recordsToExport.length} attendance records have been exported to PDF`,
+      })
+    }
     
-    // Add export date
-    doc.setFontSize(10)
-    doc.text(`Generated on: ${format(new Date(), 'MMM dd, yyyy h:mm a')}`, 14, 35)
-    
-    // Prepare table data
-    const tableData = recordsToExport.map((record, index) => [
-      (index + 1).toString(),
-      record.name,
-      record.email,
-      record.streamTitle,
-      format(new Date(record.startTime), 'MMM dd, yyyy'),
-    ])
-    
-    // Add table
-    autoTable(doc, {
-      head: [['S/N', 'Name', 'Email', 'Service', 'Date']],
-      body: tableData,
-      startY: 42,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [41, 128, 185] },
-    })
-    
-    // Save the PDF
-    doc.save(`attendance-records-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
-    
-    toast({
-      title: 'Export successful',
-      description: `${recordsToExport.length} attendance records have been exported to PDF`,
-    })
+    img.onerror = () => {
+      // Fallback: Export without logo if image fails to load
+      doc.setFillColor(13, 71, 161)
+      doc.rect(0, 0, 210, 45, 'F')
+      
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.text('DEEPER LIFE BIBLE CHURCH', 14, 18)
+      
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'normal')
+      doc.text('Pontypridd Region', 14, 26)
+      
+      doc.setFontSize(16)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ATTENDANCE RECORDS', 14, 37)
+      
+      doc.setTextColor(0, 0, 0)
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'normal')
+      doc.text(`Generated on: ${format(new Date(), 'MMMM dd, yyyy')} at ${format(new Date(), 'h:mm a')}`, 14, 52)
+      doc.text(`Total Records: ${recordsToExport.length}`, 14, 58)
+      
+      const tableData = recordsToExport.map((record, index) => [
+        (index + 1).toString(),
+        record.name,
+        record.email,
+        record.streamTitle,
+        format(new Date(record.startTime), 'MMM dd, yyyy'),
+      ])
+      
+      autoTable(doc, {
+        head: [['S/N', 'Name', 'Email', 'Service', 'Date']],
+        body: tableData,
+        startY: 65,
+        styles: { 
+          fontSize: 9,
+          cellPadding: 3,
+        },
+        headStyles: { 
+          fillColor: [13, 71, 161],
+          textColor: [255, 255, 255],
+          fontStyle: 'bold',
+          halign: 'center',
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 15 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 50 },
+          4: { halign: 'center', cellWidth: 30 },
+        },
+      })
+      
+      const pageCount = (doc as any).internal.getNumberOfPages()
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i)
+        doc.setFontSize(8)
+        doc.setTextColor(128, 128, 128)
+        doc.text(
+          `Page ${i} of ${pageCount}`,
+          doc.internal.pageSize.width / 2,
+          doc.internal.pageSize.height - 10,
+          { align: 'center' }
+        )
+        doc.text(
+          'Deeper Life Bible Church - Pontypridd Region',
+          14,
+          doc.internal.pageSize.height - 10
+        )
+      }
+      
+      doc.save(`DLBC-Pontypridd-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      
+      toast({
+        title: 'Export successful',
+        description: `${recordsToExport.length} attendance records have been exported to PDF`,
+      })
+    }
   }
 
   return (
