@@ -91,7 +91,7 @@ export default function AdminLogin() {
           <div className="text-center">
             <Button
               data-testid="link-back-to-login"
-              variant="link"
+              variant="ghost"
               onClick={handleBackToLogin}
               className="text-sm"
             >
