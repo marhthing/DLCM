@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
@@ -33,7 +32,7 @@ export default function StreamPage() {
     }
     const parsedUser = JSON.parse(storedUser)
     setUser(parsedUser)
-    
+
     fetch('/api/stream/settings')
       .then(res => res.json())
       .then(data => {
@@ -76,68 +75,50 @@ export default function StreamPage() {
 
   const checkIfLive = async (videoId: string, title: string) => {
     try {
-      // Method 1: Check if URL contains /live or /channel/*/live endpoint
-      const isLiveUrl = streamSettings?.youtubeUrl?.includes('/live')
-      
-      // Method 2: Check title for live indicators
-      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
-      
-      // Method 3: Try to fetch the video page and check for live badge
-      try {
-        const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        })
-        const pageHtml = await pageResponse.text()
-        
-        // Check for live stream indicators in the page HTML
-        const hasLiveBadge = pageHtml.includes('"isLiveContent":true') || 
-                            pageHtml.includes('BADGE_STYLE_TYPE_LIVE_NOW') ||
-                            pageHtml.includes('"label":"LIVE"')
-        
-        // If we find definitive proof it's NOT live (it's a premiere or recorded)
-        const isRecorded = pageHtml.includes('"isLiveContent":false') ||
-                          pageHtml.includes('videoDetails') && !pageHtml.includes('isLive')
-        
-        let isLive = isLiveUrl || titleIndicatesLive || hasLiveBadge
-        
-        // Override if we have proof it's recorded
-        if (isRecorded && !isLiveUrl) {
-          isLive = false
-        }
-        
-        // If status changed from live to not live, stop tracking
-        if (isStreamLive && !isLive) {
-          console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
-          // Clear all intervals to stop tracking
-          if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
-          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
-          if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
-          sendFinalHeartbeat()
-        }
-        
-        setIsStreamLive(isLive)
-        
-        if (!isLive) {
-          console.log('Detected recorded video - attendance tracking disabled')
-        }
-        
-        return isLive
-      } catch (fetchError) {
-        console.log('Could not fetch page HTML, falling back to URL/title check')
-        const isLive = isLiveUrl || titleIndicatesLive
-        setIsStreamLive(isLive)
-        return isLive
+      // Use YouTube oEmbed API to check if video is live
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+
+      if (!response.ok) {
+        console.log('Could not fetch video info, assuming live based on title')
+        const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
+        setIsStreamLive(titleIndicatesLive)
+        return titleIndicatesLive
       }
-      
+
+      const data = await response.json()
+
+      // Check title for live indicators
+      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo|live now)\b/i.test(data.title || title)
+
+      // If title doesn't indicate live, it's likely recorded
+      const isLive = titleIndicatesLive
+
+      // If status changed from live to not live, stop tracking
+      if (isStreamLive && !isLive) {
+        console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
+        // Clear all intervals to stop tracking
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+        if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
+        sendFinalHeartbeat()
+      }
+
+      setIsStreamLive(isLive)
+
+      if (!isLive) {
+        console.log('Detected recorded video - attendance tracking disabled')
+      } else {
+        console.log('Stream is LIVE - tracking attendance')
+      }
+
+      return isLive
+
     } catch (error) {
       console.error('Failed to check live status:', error)
-      // If we can't determine and URL doesn't indicate live, assume recorded
-      const safeFallback = streamSettings?.youtubeUrl?.includes('/live') || false
-      setIsStreamLive(safeFallback)
-      return safeFallback
+      // Fallback: assume live based on title
+      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
+      setIsStreamLive(titleIndicatesLive)
+      return titleIndicatesLive
     }
   }
 
@@ -161,24 +142,24 @@ export default function StreamPage() {
       // Generate session ID first
       const sessionId = generateStreamSessionId(videoId, streamTitle)
       streamSessionIdRef.current = sessionId
-      
+
       // Wait for live check to complete first
       const liveStatus = await checkIfLive(videoId, streamTitle)
-      
+
       // Don't track attendance if it's not a live stream
       if (!liveStatus) {
         console.log('Not tracking attendance - this is a recorded video')
         setIsStreamLive(false)
         return
       }
-      
+
       setIsStreamLive(true)
       try {
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
-        
+
         // Find existing record for this user and stream session
-        const existingRecord = records.find((record: any) => 
+        const existingRecord = records.find((record: any) =>
           record.email === user.email && record.streamSessionId === sessionId
         )
 
@@ -189,7 +170,7 @@ export default function StreamPage() {
           accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
           sessionStartTimeRef.current = Date.now()
           setElapsedSeconds(accumulatedSecondsRef.current)
-          
+
           // Update localStorage with database start time
           const updatedUser = {
             ...user,
@@ -204,7 +185,7 @@ export default function StreamPage() {
           currentStartTimeRef.current = newStartTime
           sessionStartTimeRef.current = newStartTime
           accumulatedSecondsRef.current = 0
-          
+
           const updatedUser = {
             ...user,
             startTime: newStartTime,
@@ -251,7 +232,7 @@ export default function StreamPage() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
       if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
       if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
-      
+
       sendFinalHeartbeat()
     }
   }, [streamSettings, user, streamTitle, isStreamLive])
@@ -261,7 +242,7 @@ export default function StreamPage() {
 
     const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
     const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
-    
+
     try {
       await fetch('/api/attendance/heartbeat', {
         method: 'POST',
@@ -285,7 +266,7 @@ export default function StreamPage() {
 
     const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
     const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
-    
+
     const payload = JSON.stringify({
       name: user.name,
       email: user.email,
@@ -340,9 +321,9 @@ export default function StreamPage() {
           <div className="flex items-center justify-between gap-3">
             {/* Logo & Title */}
             <div className="flex items-center gap-2 min-w-0">
-              <img 
-                src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
-                alt="Logo" 
+              <img
+                src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png"
+                alt="Logo"
                 className="h-8 w-8 flex-shrink-0"
               />
               <div className="min-w-0 hidden sm:block">
