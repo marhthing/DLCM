@@ -93,18 +93,6 @@ export default function StreamPage() {
     // Check database for existing session
     const initializeSession = async () => {
       try {
-        // Initialize session start time immediately to start timer
-        const now = Date.now()
-        sessionStartTimeRef.current = now
-        currentStartTimeRef.current = now
-        accumulatedSecondsRef.current = 0
-        
-        // Start timer immediately
-        timerIntervalRef.current = setInterval(() => {
-          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
-          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
-        }, 1000)
-
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
         
@@ -113,11 +101,14 @@ export default function StreamPage() {
           record.email === user.email && record.streamSessionId === sessionId
         )
 
+        const now = Date.now()
+
         if (existingRecord) {
           // Use accumulated time from database
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           currentStartTimeRef.current = dbStartTime
           accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
+          sessionStartTimeRef.current = now // Start counting from NOW for this session
           setElapsedSeconds(accumulatedSecondsRef.current)
           
           // Update localStorage with database start time
@@ -129,7 +120,12 @@ export default function StreamPage() {
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         } else {
-          // New session - use the time we already set
+          // New session - initialize everything fresh
+          currentStartTimeRef.current = now
+          accumulatedSecondsRef.current = 0
+          sessionStartTimeRef.current = now
+          setElapsedSeconds(0)
+          
           const updatedUser = {
             ...user,
             startTime: now,
@@ -138,6 +134,12 @@ export default function StreamPage() {
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         }
+
+        // Start timer AFTER we've set all the refs correctly
+        timerIntervalRef.current = setInterval(() => {
+          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
+        }, 1000)
 
         // Start heartbeat
         heartbeatIntervalRef.current = setInterval(() => {
