@@ -66,9 +66,38 @@ export default function StreamPage() {
       const data = await response.json()
       if (data.title) {
         setStreamTitle(data.title)
+        // Check if it's a live stream
+        checkIfLive(videoId, data.title)
       }
     } catch (error) {
       console.error('Failed to fetch stream title:', error)
+    }
+  }
+
+  const checkIfLive = async (videoId: string, title: string) => {
+    try {
+      // Check if URL contains /live endpoint or if title indicates live
+      const isLiveUrl = streamSettings?.youtubeUrl?.includes('/live')
+      const titleIndicatesLive = /\b(live|streaming now|watch live)\b/i.test(title)
+      
+      // For a more accurate check, we can try to detect if it's a livestream
+      // by checking if the video is currently broadcasting
+      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
+      const data = await response.json()
+      
+      // If it's a channel/live URL, assume it's live
+      // Otherwise check title and other indicators
+      const isLive = isLiveUrl || titleIndicatesLive
+      
+      setIsStreamLive(isLive)
+      
+      if (!isLive) {
+        console.log('Detected recorded video - attendance tracking disabled')
+      }
+    } catch (error) {
+      console.error('Failed to check live status:', error)
+      // Default to allowing tracking if we can't determine
+      setIsStreamLive(true)
     }
   }
 
@@ -86,6 +115,12 @@ export default function StreamPage() {
 
     // Don't start heartbeat until we have the real stream title (not the default)
     if (streamTitle === 'Live Service') return
+
+    // Don't track attendance if it's not a live stream
+    if (!isStreamLive) {
+      console.log('Not tracking attendance - this is a recorded video')
+      return
+    }
 
     const sessionId = generateStreamSessionId(videoId, streamTitle)
     streamSessionIdRef.current = sessionId
@@ -167,7 +202,7 @@ export default function StreamPage() {
       
       sendFinalHeartbeat()
     }
-  }, [streamSettings, user, streamTitle])
+  }, [streamSettings, user, streamTitle, isStreamLive])
 
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
@@ -269,14 +304,18 @@ export default function StreamPage() {
                 <Clock className="h-3 w-3" />
                 <span className="hidden sm:inline">{format(new Date(currentStartTimeRef.current), 'h:mm a')}</span>
               </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
-                <Timer className="h-3 w-3" />
-                <span>{formatDuration(elapsedSeconds)}</span>
-              </div>
-              <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
-                <Users className="h-3 w-3" />
-                <span>{activeViewersCount}</span>
-              </div>
+              {isStreamLive && (
+                <>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
+                    <Timer className="h-3 w-3" />
+                    <span>{formatDuration(elapsedSeconds)}</span>
+                  </div>
+                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
+                    <Users className="h-3 w-3" />
+                    <span>{activeViewersCount}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -309,7 +348,24 @@ export default function StreamPage() {
 
         {/* Video Title */}
         <div className="px-2">
-          <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
+            {isStreamLive ? (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-md">
+                <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                LIVE
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-500 text-white text-xs font-semibold rounded-md">
+                RECORDED
+              </span>
+            )}
+          </div>
+          {!isStreamLive && (
+            <p className="text-sm text-amber-400 mt-2">
+              ⚠️ This is a recorded video. Attendance is not being tracked.
+            </p>
+          )}
         </div>
 
         {/* Info Cards - Responsive Grid */}
