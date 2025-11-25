@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
@@ -18,7 +19,6 @@ export default function StreamPage() {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
-  const liveCheckIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
   const sessionStartTimeRef = useRef(0) // When this viewing session started
@@ -32,7 +32,7 @@ export default function StreamPage() {
     }
     const parsedUser = JSON.parse(storedUser)
     setUser(parsedUser)
-
+    
     fetch('/api/stream/settings')
       .then(res => res.json())
       .then(data => {
@@ -66,59 +66,9 @@ export default function StreamPage() {
       const data = await response.json()
       if (data.title) {
         setStreamTitle(data.title)
-        // Live check will be done in initializeSession
       }
     } catch (error) {
       console.error('Failed to fetch stream title:', error)
-    }
-  }
-
-  const checkIfLive = async (videoId: string, title: string) => {
-    try {
-      // Use YouTube oEmbed API to check if video is live
-      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
-
-      if (!response.ok) {
-        console.log('Could not fetch video info, assuming live based on title')
-        const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
-        setIsStreamLive(titleIndicatesLive)
-        return titleIndicatesLive
-      }
-
-      const data = await response.json()
-
-      // Check title for live indicators
-      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo|live now)\b/i.test(data.title || title)
-
-      // If title doesn't indicate live, it's likely recorded
-      const isLive = titleIndicatesLive
-
-      // If status changed from live to not live, stop tracking
-      if (isStreamLive && !isLive) {
-        console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
-        // Clear all intervals to stop tracking
-        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
-        if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
-        sendFinalHeartbeat()
-      }
-
-      setIsStreamLive(isLive)
-
-      if (!isLive) {
-        console.log('Detected recorded video - attendance tracking disabled')
-      } else {
-        console.log('Stream is LIVE - tracking attendance')
-      }
-
-      return isLive
-
-    } catch (error) {
-      console.error('Failed to check live status:', error)
-      // Fallback: assume live based on title
-      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
-      setIsStreamLive(titleIndicatesLive)
-      return titleIndicatesLive
     }
   }
 
@@ -137,29 +87,17 @@ export default function StreamPage() {
     // Don't start heartbeat until we have the real stream title (not the default)
     if (streamTitle === 'Live Service') return
 
+    const sessionId = generateStreamSessionId(videoId, streamTitle)
+    streamSessionIdRef.current = sessionId
+
     // Check database for existing session
     const initializeSession = async () => {
-      // Generate session ID first
-      const sessionId = generateStreamSessionId(videoId, streamTitle)
-      streamSessionIdRef.current = sessionId
-
-      // Wait for live check to complete first
-      const liveStatus = await checkIfLive(videoId, streamTitle)
-
-      // Don't track attendance if it's not a live stream
-      if (!liveStatus) {
-        console.log('Not tracking attendance - this is a recorded video')
-        setIsStreamLive(false)
-        return
-      }
-
-      setIsStreamLive(true)
       try {
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
-
+        
         // Find existing record for this user and stream session
-        const existingRecord = records.find((record: any) =>
+        const existingRecord = records.find((record: any) => 
           record.email === user.email && record.streamSessionId === sessionId
         )
 
@@ -170,7 +108,7 @@ export default function StreamPage() {
           accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
           sessionStartTimeRef.current = Date.now()
           setElapsedSeconds(accumulatedSecondsRef.current)
-
+          
           // Update localStorage with database start time
           const updatedUser = {
             ...user,
@@ -185,7 +123,7 @@ export default function StreamPage() {
           currentStartTimeRef.current = newStartTime
           sessionStartTimeRef.current = newStartTime
           accumulatedSecondsRef.current = 0
-
+          
           const updatedUser = {
             ...user,
             startTime: newStartTime,
@@ -215,11 +153,6 @@ export default function StreamPage() {
         }
         fetchActiveViewers()
         activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
-
-        // Check live status every 60 seconds to detect when stream ends
-        liveCheckIntervalRef.current = setInterval(() => {
-          checkIfLive(videoId, streamTitle)
-        }, 60000)
       } catch (error) {
         console.error('Failed to check existing session:', error)
       }
@@ -231,18 +164,17 @@ export default function StreamPage() {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
       if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
-      if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
-
+      
       sendFinalHeartbeat()
     }
-  }, [streamSettings, user, streamTitle, isStreamLive])
+  }, [streamSettings, user, streamTitle])
 
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
 
     const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
     const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
-
+    
     try {
       await fetch('/api/attendance/heartbeat', {
         method: 'POST',
@@ -266,7 +198,7 @@ export default function StreamPage() {
 
     const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
     const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
-
+    
     const payload = JSON.stringify({
       name: user.name,
       email: user.email,
@@ -321,9 +253,9 @@ export default function StreamPage() {
           <div className="flex items-center justify-between gap-3">
             {/* Logo & Title */}
             <div className="flex items-center gap-2 min-w-0">
-              <img
-                src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png"
-                alt="Logo"
+              <img 
+                src="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" 
+                alt="Logo" 
                 className="h-8 w-8 flex-shrink-0"
               />
               <div className="min-w-0 hidden sm:block">
@@ -337,18 +269,14 @@ export default function StreamPage() {
                 <Clock className="h-3 w-3" />
                 <span className="hidden sm:inline">{format(new Date(currentStartTimeRef.current), 'h:mm a')}</span>
               </div>
-              {isStreamLive && (
-                <>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
-                    <Timer className="h-3 w-3" />
-                    <span>{formatDuration(elapsedSeconds)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
-                    <Users className="h-3 w-3" />
-                    <span>{activeViewersCount}</span>
-                  </div>
-                </>
-              )}
+              <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
+                <Timer className="h-3 w-3" />
+                <span>{formatDuration(elapsedSeconds)}</span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
+                <Users className="h-3 w-3" />
+                <span>{activeViewersCount}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -381,24 +309,7 @@ export default function StreamPage() {
 
         {/* Video Title */}
         <div className="px-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
-            {isStreamLive ? (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs font-semibold rounded-md">
-                <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
-                LIVE
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-500 text-white text-xs font-semibold rounded-md">
-                RECORDED
-              </span>
-            )}
-          </div>
-          {!isStreamLive && (
-            <p className="text-sm text-amber-400 mt-2">
-              ⚠️ This is a recorded video. Attendance is not being tracked.
-            </p>
-          )}
+          <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
         </div>
 
         {/* Info Cards - Responsive Grid */}
