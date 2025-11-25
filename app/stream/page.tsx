@@ -67,8 +67,7 @@ export default function StreamPage() {
       const data = await response.json()
       if (data.title) {
         setStreamTitle(data.title)
-        // Check if it's a live stream
-        checkIfLive(videoId, data.title)
+        // Live check will be done in initializeSession
       }
     } catch (error) {
       console.error('Failed to fetch stream title:', error)
@@ -77,37 +76,68 @@ export default function StreamPage() {
 
   const checkIfLive = async (videoId: string, title: string) => {
     try {
-      // Check if URL contains /live endpoint or if title indicates live
+      // Method 1: Check if URL contains /live or /channel/*/live endpoint
       const isLiveUrl = streamSettings?.youtubeUrl?.includes('/live')
-      const titleIndicatesLive = /\b(live|streaming now|watch live)\b/i.test(title)
       
-      // For a more accurate check, we can try to detect if it's a livestream
-      // by checking if the video is currently broadcasting
-      const response = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`)
-      const data = await response.json()
+      // Method 2: Check title for live indicators
+      const titleIndicatesLive = /\b(live|streaming now|watch live|en direct|ao vivo)\b/i.test(title)
       
-      // If it's a channel/live URL, assume it's live
-      // Otherwise check title and other indicators
-      const isLive = isLiveUrl || titleIndicatesLive
-      
-      // If status changed from live to not live, stop tracking
-      if (isStreamLive && !isLive) {
-        console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
-        // Clear all intervals to stop tracking
-        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
-        sendFinalHeartbeat()
+      // Method 3: Try to fetch the video page and check for live badge
+      try {
+        const pageResponse = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+          method: 'GET',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        })
+        const pageHtml = await pageResponse.text()
+        
+        // Check for live stream indicators in the page HTML
+        const hasLiveBadge = pageHtml.includes('"isLiveContent":true') || 
+                            pageHtml.includes('BADGE_STYLE_TYPE_LIVE_NOW') ||
+                            pageHtml.includes('"label":"LIVE"')
+        
+        // If we find definitive proof it's NOT live (it's a premiere or recorded)
+        const isRecorded = pageHtml.includes('"isLiveContent":false') ||
+                          pageHtml.includes('videoDetails') && !pageHtml.includes('isLive')
+        
+        let isLive = isLiveUrl || titleIndicatesLive || hasLiveBadge
+        
+        // Override if we have proof it's recorded
+        if (isRecorded && !isLiveUrl) {
+          isLive = false
+        }
+        
+        // If status changed from live to not live, stop tracking
+        if (isStreamLive && !isLive) {
+          console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
+          // Clear all intervals to stop tracking
+          if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+          if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+          if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
+          sendFinalHeartbeat()
+        }
+        
+        setIsStreamLive(isLive)
+        
+        if (!isLive) {
+          console.log('Detected recorded video - attendance tracking disabled')
+        }
+        
+        return isLive
+      } catch (fetchError) {
+        console.log('Could not fetch page HTML, falling back to URL/title check')
+        const isLive = isLiveUrl || titleIndicatesLive
+        setIsStreamLive(isLive)
+        return isLive
       }
       
-      setIsStreamLive(isLive)
-      
-      if (!isLive) {
-        console.log('Detected recorded video - attendance tracking disabled')
-      }
     } catch (error) {
       console.error('Failed to check live status:', error)
-      // Default to allowing tracking if we can't determine
-      setIsStreamLive(true)
+      // If we can't determine and URL doesn't indicate live, assume recorded
+      const safeFallback = streamSettings?.youtubeUrl?.includes('/live') || false
+      setIsStreamLive(safeFallback)
+      return safeFallback
     }
   }
 
@@ -126,17 +156,19 @@ export default function StreamPage() {
     // Don't start heartbeat until we have the real stream title (not the default)
     if (streamTitle === 'Live Service') return
 
-    // Don't track attendance if it's not a live stream
-    if (!isStreamLive) {
-      console.log('Not tracking attendance - this is a recorded video')
-      return
-    }
-
-    const sessionId = generateStreamSessionId(videoId, streamTitle)
-    streamSessionIdRef.current = sessionId
-
     // Check database for existing session
     const initializeSession = async () => {
+      // Wait for live check to complete first
+      const liveStatus = await checkIfLive(videoId, streamTitle)
+      
+      // Don't track attendance if it's not a live stream
+      if (!liveStatus) {
+        console.log('Not tracking attendance - this is a recorded video')
+        setIsStreamLive(false)
+        return
+      }
+      
+      setIsStreamLive(true)
       try {
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
