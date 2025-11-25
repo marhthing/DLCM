@@ -93,6 +93,18 @@ export default function StreamPage() {
     // Check database for existing session
     const initializeSession = async () => {
       try {
+        // Initialize session start time immediately to start timer
+        const now = Date.now()
+        sessionStartTimeRef.current = now
+        currentStartTimeRef.current = now
+        accumulatedSecondsRef.current = 0
+        
+        // Start timer immediately
+        timerIntervalRef.current = setInterval(() => {
+          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
+        }, 1000)
+
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
         
@@ -102,11 +114,10 @@ export default function StreamPage() {
         )
 
         if (existingRecord) {
-          // Use accumulated time from database and start fresh session
+          // Use accumulated time from database
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           currentStartTimeRef.current = dbStartTime
           accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
-          sessionStartTimeRef.current = Date.now()
           setElapsedSeconds(accumulatedSecondsRef.current)
           
           // Update localStorage with database start time
@@ -118,32 +129,22 @@ export default function StreamPage() {
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         } else {
-          // New session - create new start time
-          const newStartTime = Date.now()
-          currentStartTimeRef.current = newStartTime
-          sessionStartTimeRef.current = newStartTime
-          accumulatedSecondsRef.current = 0
-          
+          // New session - use the time we already set
           const updatedUser = {
             ...user,
-            startTime: newStartTime,
+            startTime: now,
             lastStreamSessionId: sessionId
           }
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         }
 
-        // Start heartbeat and timer
+        // Start heartbeat
         heartbeatIntervalRef.current = setInterval(() => {
           sendHeartbeat()
         }, 30000)
 
         sendHeartbeat()
-
-        timerIntervalRef.current = setInterval(() => {
-          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
-          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
-        }, 1000)
 
         const fetchActiveViewers = () => {
           fetch('/api/attendance/active-count')
