@@ -21,6 +21,8 @@ export default function StreamPage() {
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
+  const sessionStartTimeRef = useRef(0) // When this viewing session started
+  const accumulatedSecondsRef = useRef(0) // Previously accumulated time from database
 
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
@@ -100,10 +102,12 @@ export default function StreamPage() {
         )
 
         if (existingRecord) {
-          // Use start time from database
+          // Use accumulated time from database and start fresh session
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           currentStartTimeRef.current = dbStartTime
-          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
+          accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
+          sessionStartTimeRef.current = Date.now()
+          setElapsedSeconds(accumulatedSecondsRef.current)
           
           // Update localStorage with database start time
           const updatedUser = {
@@ -117,6 +121,8 @@ export default function StreamPage() {
           // New session - create new start time
           const newStartTime = Date.now()
           currentStartTimeRef.current = newStartTime
+          sessionStartTimeRef.current = newStartTime
+          accumulatedSecondsRef.current = 0
           
           const updatedUser = {
             ...user,
@@ -135,7 +141,8 @@ export default function StreamPage() {
         sendHeartbeat()
 
         timerIntervalRef.current = setInterval(() => {
-          setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
+          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
         }, 1000)
 
         const fetchActiveViewers = () => {
@@ -165,7 +172,8 @@ export default function StreamPage() {
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
 
-    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
+    const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+    const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
     
     try {
       await fetch('/api/attendance/heartbeat', {
@@ -177,7 +185,7 @@ export default function StreamPage() {
           streamSessionId: streamSessionIdRef.current,
           streamTitle: streamTitle,
           startTime: new Date(currentStartTimeRef.current).toISOString(),
-          durationSeconds,
+          durationSeconds: totalDurationSeconds,
         }),
       })
     } catch (error) {
@@ -188,7 +196,8 @@ export default function StreamPage() {
   const sendFinalHeartbeat = () => {
     if (!user || !streamSessionIdRef.current) return
 
-    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
+    const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
+    const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
     
     const payload = JSON.stringify({
       name: user.name,
@@ -196,7 +205,7 @@ export default function StreamPage() {
       streamSessionId: streamSessionIdRef.current,
       streamTitle: streamTitle,
       startTime: new Date(currentStartTimeRef.current).toISOString(),
-      durationSeconds,
+      durationSeconds: totalDurationSeconds,
     })
 
     if (navigator.sendBeacon) {
