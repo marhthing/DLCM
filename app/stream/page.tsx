@@ -21,8 +21,6 @@ export default function StreamPage() {
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
-  const sessionStartTimeRef = useRef(0) // When this viewing session started
-  const accumulatedSecondsRef = useRef(0) // Previously accumulated time from database
 
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
@@ -101,15 +99,11 @@ export default function StreamPage() {
           record.email === user.email && record.streamSessionId === sessionId
         )
 
-        const now = Date.now()
-
         if (existingRecord) {
-          // Use accumulated time from database
+          // Use start time from database
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           currentStartTimeRef.current = dbStartTime
-          accumulatedSecondsRef.current = existingRecord.durationSeconds || 0
-          sessionStartTimeRef.current = now // Start counting from NOW for this session
-          setElapsedSeconds(accumulatedSecondsRef.current)
+          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
           
           // Update localStorage with database start time
           const updatedUser = {
@@ -120,33 +114,29 @@ export default function StreamPage() {
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         } else {
-          // New session - initialize everything fresh
-          currentStartTimeRef.current = now
-          accumulatedSecondsRef.current = 0
-          sessionStartTimeRef.current = now
-          setElapsedSeconds(0)
+          // New session - create new start time
+          const newStartTime = Date.now()
+          currentStartTimeRef.current = newStartTime
           
           const updatedUser = {
             ...user,
-            startTime: now,
+            startTime: newStartTime,
             lastStreamSessionId: sessionId
           }
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
         }
 
-        // Start timer AFTER we've set all the refs correctly
-        timerIntervalRef.current = setInterval(() => {
-          const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
-          setElapsedSeconds(accumulatedSecondsRef.current + currentSessionSeconds)
-        }, 1000)
-
-        // Start heartbeat
+        // Start heartbeat and timer
         heartbeatIntervalRef.current = setInterval(() => {
           sendHeartbeat()
         }, 30000)
 
         sendHeartbeat()
+
+        timerIntervalRef.current = setInterval(() => {
+          setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
+        }, 1000)
 
         const fetchActiveViewers = () => {
           fetch('/api/attendance/active-count')
@@ -175,8 +165,7 @@ export default function StreamPage() {
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
 
-    const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
-    const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
+    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
     
     try {
       await fetch('/api/attendance/heartbeat', {
@@ -188,7 +177,7 @@ export default function StreamPage() {
           streamSessionId: streamSessionIdRef.current,
           streamTitle: streamTitle,
           startTime: new Date(currentStartTimeRef.current).toISOString(),
-          durationSeconds: totalDurationSeconds,
+          durationSeconds,
         }),
       })
     } catch (error) {
@@ -199,8 +188,7 @@ export default function StreamPage() {
   const sendFinalHeartbeat = () => {
     if (!user || !streamSessionIdRef.current) return
 
-    const currentSessionSeconds = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000)
-    const totalDurationSeconds = accumulatedSecondsRef.current + currentSessionSeconds
+    const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
     
     const payload = JSON.stringify({
       name: user.name,
@@ -208,7 +196,7 @@ export default function StreamPage() {
       streamSessionId: streamSessionIdRef.current,
       streamTitle: streamTitle,
       startTime: new Date(currentStartTimeRef.current).toISOString(),
-      durationSeconds: totalDurationSeconds,
+      durationSeconds,
     })
 
     if (navigator.sendBeacon) {
