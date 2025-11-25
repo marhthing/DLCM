@@ -158,6 +158,10 @@ export default function StreamPage() {
 
     // Check database for existing session
     const initializeSession = async () => {
+      // Generate session ID first
+      const sessionId = generateStreamSessionId(videoId, streamTitle)
+      streamSessionIdRef.current = sessionId
+      
       // Wait for live check to complete first
       const liveStatus = await checkIfLive(videoId, streamTitle)
       
