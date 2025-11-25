@@ -19,6 +19,7 @@ export default function StreamPage() {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const liveCheckIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
   const sessionStartTimeRef = useRef(0) // When this viewing session started
@@ -88,6 +89,15 @@ export default function StreamPage() {
       // If it's a channel/live URL, assume it's live
       // Otherwise check title and other indicators
       const isLive = isLiveUrl || titleIndicatesLive
+      
+      // If status changed from live to not live, stop tracking
+      if (isStreamLive && !isLive) {
+        console.log('Stream ended - switching to recorded video. Stopping attendance tracking.')
+        // Clear all intervals to stop tracking
+        if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+        sendFinalHeartbeat()
+      }
       
       setIsStreamLive(isLive)
       
@@ -188,6 +198,11 @@ export default function StreamPage() {
         }
         fetchActiveViewers()
         activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
+
+        // Check live status every 60 seconds to detect when stream ends
+        liveCheckIntervalRef.current = setInterval(() => {
+          checkIfLive(videoId, streamTitle)
+        }, 60000)
       } catch (error) {
         console.error('Failed to check existing session:', error)
       }
@@ -199,6 +214,7 @@ export default function StreamPage() {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
       if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
+      if (liveCheckIntervalRef.current) clearInterval(liveCheckIntervalRef.current)
       
       sendFinalHeartbeat()
     }
