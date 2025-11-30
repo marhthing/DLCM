@@ -24,6 +24,10 @@ export class SupabaseStorage {
       return [];
     }
 
+    if (!data) {
+      return [];
+    }
+
     return data.map(record => ({
       id: record.id,
       name: record.name,
@@ -31,9 +35,9 @@ export class SupabaseStorage {
       streamSessionId: record.stream_session_id,
       streamTitle: record.stream_title || 'Live Service',
       startTime: record.start_time,
-      endTime: record.end_time,
+      endTime: record.end_time || null,
       lastSeenAt: record.last_seen_at,
-      durationSeconds: record.duration_seconds,
+      durationSeconds: record.duration_seconds || 0,
       timestamp: record.timestamp,
     }));
   }
