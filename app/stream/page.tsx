@@ -59,6 +59,32 @@ export default function StreamPage() {
           } else if (playerState === 2) {
             setIsPlaying(false)
             setShowJumpToLive(true)
+          } else if (playerState === 0) {
+            // Video ended - likely means live stream ended and became a recorded video
+            setIsPlaying(false)
+            setIsLiveStream(false)
+            if (heartbeatIntervalRef.current) {
+              console.log('Video ended, stopping attendance tracking')
+              clearInterval(heartbeatIntervalRef.current)
+              heartbeatIntervalRef.current = null
+              sendFinalHeartbeat()
+            }
+          }
+        }
+        
+        // Check if video has duration (recorded) vs no duration (live)
+        if (data.event === 'infoDelivery' && data.info?.duration !== undefined) {
+          const duration = data.info.duration
+          // If duration is a finite number > 0, it's a recorded video
+          // Live streams have duration = 0 or undefined
+          if (duration > 0 && isFinite(duration)) {
+            console.log('Video has duration, marking as recorded')
+            setIsLiveStream(false)
+            if (heartbeatIntervalRef.current) {
+              clearInterval(heartbeatIntervalRef.current)
+              heartbeatIntervalRef.current = null
+              sendFinalHeartbeat()
+            }
           }
         }
       } catch (e) {

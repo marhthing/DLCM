@@ -9,37 +9,30 @@ export async function checkIfLive(videoId: string): Promise<boolean> {
     
     if (!response.ok) {
       console.warn('Failed to fetch YouTube video info')
-      return true // Default to true if we can't check
+      return true // Default to true (live) if we can't check
     }
 
     const data = await response.json()
     
-    // Check if the title contains common live indicators
+    // Check if the title contains indicators that it's recorded/VOD
     const title = data.title?.toLowerCase() || ''
-    const isLive = title.includes('live') || title.includes('streaming')
+    const isRecorded = 
+      title.includes('replay') || 
+      title.includes('recorded') || 
+      title.includes('vod') ||
+      title.includes('archive')
     
-    // Additional check: Try to get more info from noembed
-    const noembedResponse = await fetch(
-      `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`
-    )
-    
-    if (noembedResponse.ok) {
-      const noembedData = await noembedResponse.json()
-      const author = noembedData.author_name?.toLowerCase() || ''
-      const noembedTitle = noembedData.title?.toLowerCase() || ''
-      
-      // Check for "live" badge or indicators
-      if (noembedTitle.includes('live now') || 
-          noembedTitle.includes('live stream') ||
-          author.includes('live')) {
-        return true
-      }
+    // If we detect recorded indicators, mark as not live
+    if (isRecorded) {
+      return false
     }
     
-    return isLive
+    // Default to live - we can't reliably detect without YouTube API key
+    // The player state monitoring will help catch when a live stream ends
+    return true
   } catch (error) {
     console.error('Error checking if video is live:', error)
-    return true // Default to true if there's an error
+    return true // Default to true (live) if there's an error
   }
 }
 
