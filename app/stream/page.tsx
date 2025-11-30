@@ -173,27 +173,51 @@ export default function StreamPage() {
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
         
-        // Find existing record for this user and stream session
-        const existingRecord = records.find((record: any) => 
-          record.email === user.email && record.streamSessionId === sessionId
-        )
+        // Find existing record for this user and stream session (today's session only)
+        const today = new Date().toISOString().split('T')[0]
+        const existingRecord = records.find((record: any) => {
+          if (record.email !== user.email || record.streamSessionId !== sessionId) return false
+          
+          // Check if the record is from today
+          const recordDate = new Date(record.startTime).toISOString().split('T')[0]
+          return recordDate === today
+        })
 
         if (existingRecord) {
-          // Use start time from database
+          // Use start time from database, but validate it's reasonable
           const dbStartTime = new Date(existingRecord.startTime).getTime()
-          currentStartTimeRef.current = dbStartTime
+          const now = Date.now()
+          const timeDiff = now - dbStartTime
           
-          // Update localStorage with database start time
-          const updatedUser = {
-            ...user,
-            startTime: dbStartTime,
-            lastStreamSessionId: sessionId
+          // If the time difference is more than 24 hours, it's invalid - start fresh
+          if (timeDiff > 24 * 60 * 60 * 1000 || timeDiff < 0) {
+            console.warn('Invalid timestamp in database, starting fresh')
+            const newStartTime = now
+            currentStartTimeRef.current = newStartTime
+            
+            const updatedUser = {
+              ...user,
+              startTime: newStartTime,
+              lastStreamSessionId: sessionId
+            }
+            setUser(updatedUser)
+            localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+            setElapsedSeconds(0)
+          } else {
+            // Valid timestamp from today
+            currentStartTimeRef.current = dbStartTime
+            
+            const updatedUser = {
+              ...user,
+              startTime: dbStartTime,
+              lastStreamSessionId: sessionId
+            }
+            setUser(updatedUser)
+            localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+            
+            // Set initial elapsed time
+            setElapsedSeconds(Math.floor(timeDiff / 1000))
           }
-          setUser(updatedUser)
-          localStorage.setItem('churchUser', JSON.stringify(updatedUser))
-          
-          // Set initial elapsed time
-          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
         } else {
           // New session - create new start time
           const newStartTime = Date.now()
