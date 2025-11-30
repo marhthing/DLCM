@@ -28,32 +28,11 @@ export default function StreamPage() {
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [origin, setOrigin] = useState('')
-  const [isBehindLive, setIsBehindLive] = useState(false)
+  const [showJumpToLive, setShowJumpToLive] = useState(false)
   
   // Set origin after mount to avoid hydration mismatch
   useEffect(() => {
     setOrigin(window.location.origin)
-    
-    // Listen for player state changes
-    const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== 'https://www.youtube.com') return
-      
-      try {
-        const data = JSON.parse(event.data)
-        // YouTube sends player state info
-        if (data.info && data.info.currentTime && data.info.duration) {
-          const currentTime = data.info.currentTime
-          const duration = data.info.duration
-          // If more than 10 seconds behind live (duration - currentTime > 10), show glow
-          setIsBehindLive(duration - currentTime > 10)
-        }
-      } catch (e) {
-        // Ignore parse errors
-      }
-    }
-    
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
   useEffect(() => {
@@ -128,6 +107,7 @@ export default function StreamPage() {
   const handlePause = () => {
     sendCommand('pauseVideo')
     setIsPlaying(false)
+    setShowJumpToLive(true)
   }
 
   const handleMute = () => {
@@ -164,7 +144,7 @@ export default function StreamPage() {
         iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}&t=${timestamp}`
         setIsPlaying(true)
         setIframeLoading(true)
-        setIsBehindLive(false)
+        setShowJumpToLive(false)
       }
     }
   }
@@ -202,7 +182,6 @@ export default function StreamPage() {
           // Use start time from database
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           currentStartTimeRef.current = dbStartTime
-          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
           
           // Update localStorage with database start time
           const updatedUser = {
@@ -212,6 +191,9 @@ export default function StreamPage() {
           }
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+          
+          // Set initial elapsed time
+          setElapsedSeconds(Math.floor((Date.now() - dbStartTime) / 1000))
         } else {
           // New session - create new start time
           const newStartTime = Date.now()
@@ -224,6 +206,9 @@ export default function StreamPage() {
           }
           setUser(updatedUser)
           localStorage.setItem('churchUser', JSON.stringify(updatedUser))
+          
+          // Set initial elapsed time to 0
+          setElapsedSeconds(0)
         }
 
         // Start heartbeat and timer
@@ -233,8 +218,10 @@ export default function StreamPage() {
 
         sendHeartbeat()
 
+        // Start timer interval - update every second
         timerIntervalRef.current = setInterval(() => {
-          setElapsedSeconds(Math.floor((Date.now() - currentStartTimeRef.current) / 1000))
+          const elapsed = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
+          setElapsedSeconds(elapsed)
         }, 1000)
 
         const fetchActiveViewers = () => {
@@ -451,17 +438,19 @@ export default function StreamPage() {
               </Button>
             )}
 
-            {/* Go Live - Jump to live stream */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGoLive}
-              className={`bg-red-600/80 border-red-500 text-white ${isBehindLive ? 'animate-pulse ring-2 ring-red-400' : ''}`}
-              data-testid="button-go-live"
-            >
-              <Radio className="h-4 w-4 mr-1" />
-              Go Live
-            </Button>
+            {/* Jump to Live - Only show when user has paused or rewinded */}
+            {showJumpToLive && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGoLive}
+                className="bg-red-600/80 border-red-500 text-white animate-pulse ring-2 ring-red-400"
+                data-testid="button-go-live"
+              >
+                <Radio className="h-4 w-4 mr-1" />
+                Jump to Live
+              </Button>
+            )}
 
             {/* Fullscreen */}
             <Button
