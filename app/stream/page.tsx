@@ -132,18 +132,15 @@ export default function StreamPage() {
 
   // Player control functions using postMessage API
   const handlePlay = () => {
-    // Jump to live when playing from paused state
-    if (showJumpToLive) {
-      handleGoLive()
-    } else {
-      sendCommand('playVideo')
-      setIsPlaying(true)
-    }
+    sendCommand('playVideo')
+    setIsPlaying(true)
+    // Don't hide Jump to Live button - let user decide if they want to jump to live
   }
 
   const handlePause = () => {
     sendCommand('pauseVideo')
     setIsPlaying(false)
+    // Show Jump to Live button immediately when paused
     setShowJumpToLive(true)
   }
 
