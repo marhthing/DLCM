@@ -3,10 +3,11 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, Radio } from 'lucide-react'
+import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, Radio, Video, VideoOff } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { checkIfLive, monitorLiveStatus } from '@/lib/youtube-api'
 
 export default function StreamPage() {
   const router = useRouter()
@@ -29,6 +30,8 @@ export default function StreamPage() {
   const [isMuted, setIsMuted] = useState(false)
   const [origin, setOrigin] = useState('')
   const [showJumpToLive, setShowJumpToLive] = useState(false)
+  const [isLiveStream, setIsLiveStream] = useState(true) // Track if stream is actually live
+  const [liveStatusChecked, setLiveStatusChecked] = useState(false)
   
   // Set origin after mount to avoid hydration mismatch
   useEffect(() => {
@@ -120,6 +123,42 @@ export default function StreamPage() {
     }
   }
 
+  // Monitor live stream status
+  useEffect(() => {
+    if (!streamSettings?.youtubeUrl) return
+
+    const videoId = extractVideoId(streamSettings.youtubeUrl)
+    if (!videoId) return
+
+    let cleanup: (() => void) | undefined
+
+    const startMonitoring = async () => {
+      // Initial check
+      const isLive = await checkIfLive(videoId)
+      setIsLiveStream(isLive)
+      setLiveStatusChecked(true)
+
+      // Start monitoring for status changes
+      cleanup = await monitorLiveStatus(videoId, (newStatus) => {
+        setIsLiveStream(newStatus)
+        
+        // If stream went from live to recorded, stop heartbeat
+        if (!newStatus && heartbeatIntervalRef.current) {
+          console.log('Stream is no longer live, stopping attendance tracking')
+          clearInterval(heartbeatIntervalRef.current)
+          heartbeatIntervalRef.current = null
+          sendFinalHeartbeat()
+        }
+      })
+    }
+
+    startMonitoring()
+
+    return () => {
+      if (cleanup) cleanup()
+    }
+  }, [streamSettings])
+
   // Helper function to send commands to YouTube iframe via postMessage
   const sendCommand = (command: string, args: any[] = []) => {
     if (iframeRef.current?.contentWindow) {
@@ -197,6 +236,12 @@ export default function StreamPage() {
 
     // Don't start heartbeat until we have the real stream title (not the default)
     if (streamTitle === 'Live Service') return
+
+    // Don't track attendance if stream is not live
+    if (liveStatusChecked && !isLiveStream) {
+      console.log('Stream is not live, skipping attendance tracking')
+      return
+    }
 
     const sessionId = generateStreamSessionId(videoId, streamTitle)
     streamSessionIdRef.current = sessionId
@@ -291,7 +336,7 @@ export default function StreamPage() {
     }
 
     initializeSession()
-  }, [streamSettings, user, streamTitle])
+  }, [streamSettings, user, streamTitle, isLiveStream, liveStatusChecked])
 
   // Cleanup effect for session intervals
   useEffect(() => {
@@ -582,12 +627,26 @@ export default function StreamPage() {
           <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
             <CardContent className="p-3">
               <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0">
-                  <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                <div className={`h-10 w-10 rounded-full ${isLiveStream ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-gray-500 to-gray-600'} flex items-center justify-center flex-shrink-0`}>
+                  {isLiveStream ? (
+                    <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
+                  ) : (
+                    <VideoOff className="h-4 w-4 text-white" />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-0.5">Now Playing</p>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-xs text-gray-400">
+                      {isLiveStream ? 'LIVE Now' : 'Recorded'}
+                    </p>
+                    {isLiveStream && (
+                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">LIVE</span>
+                    )}
+                  </div>
                   <p className="text-sm font-semibold text-white line-clamp-2">{streamTitle}</p>
+                  {!isLiveStream && liveStatusChecked && (
+                    <p className="text-[10px] text-gray-500 mt-0.5">Attendance tracking disabled</p>
+                  )}
                 </div>
               </div>
             </CardContent>
