@@ -1,20 +1,12 @@
 
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Plus, Minus } from 'lucide-react'
+import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
-
-// Extend Window interface for YouTube API
-declare global {
-  interface Window {
-    YT: typeof YT;
-    onYouTubeIframeAPIReady: () => void;
-  }
-}
 
 export default function StreamPage() {
   const router = useRouter()
@@ -31,13 +23,10 @@ export default function StreamPage() {
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
   
-  // YouTube Player API refs and state
-  const playerRef = useRef<YT.Player | null>(null)
-  const playerContainerRef = useRef<HTMLDivElement>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
+  // YouTube Player control state
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(100)
-  const [ytApiReady, setYtApiReady] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
@@ -92,130 +81,50 @@ export default function StreamPage() {
     }
   }
 
-  // Load YouTube IFrame API
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !window.YT) {
-      const tag = document.createElement('script')
-      tag.src = 'https://www.youtube.com/iframe_api'
-      const firstScriptTag = document.getElementsByTagName('script')[0]
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
-
-      window.onYouTubeIframeAPIReady = () => {
-        setYtApiReady(true)
-      }
-    } else if (window.YT && window.YT.Player) {
-      setYtApiReady(true)
+  // Helper function to send commands to YouTube iframe via postMessage
+  const sendCommand = (command: string, args: any[] = []) => {
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: command, args }),
+        '*'
+      )
     }
-  }, [])
+  }
 
-  // Initialize YouTube Player when API is ready and we have settings
-  useEffect(() => {
-    if (!ytApiReady || !streamSettings?.youtubeUrl || playerRef.current) return
+  // Player control functions using postMessage API
+  const handlePlay = () => {
+    sendCommand('playVideo')
+    setIsPlaying(true)
+  }
 
-    const videoId = extractVideoId(streamSettings.youtubeUrl)
-    if (!videoId) return
+  const handlePause = () => {
+    sendCommand('pauseVideo')
+    setIsPlaying(false)
+  }
 
-    playerRef.current = new window.YT.Player('youtube-player', {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1,
-        controls: 0,
-        modestbranding: 1,
-        rel: 0,
-        showinfo: 0,
-        fs: 0,
-        iv_load_policy: 3,
-        disablekb: 1,
-      },
-      events: {
-        onReady: (event: YT.PlayerEvent) => {
-          setIframeLoading(false)
-          setVolume(event.target.getVolume())
-          setIsMuted(event.target.isMuted())
-        },
-        onStateChange: (event: YT.OnStateChangeEvent) => {
-          setIsPlaying(event.data === window.YT.PlayerState.PLAYING)
-        },
-      },
-    })
-
-    return () => {
-      if (playerRef.current) {
-        playerRef.current.destroy()
-        playerRef.current = null
-      }
-    }
-  }, [ytApiReady, streamSettings])
-
-  // Player control functions
-  const handlePlay = useCallback(() => {
-    playerRef.current?.playVideo()
-  }, [])
-
-  const handlePause = useCallback(() => {
-    playerRef.current?.pauseVideo()
-  }, [])
-
-  const handleMute = useCallback(() => {
-    playerRef.current?.mute()
+  const handleMute = () => {
+    sendCommand('mute')
     setIsMuted(true)
-  }, [])
+  }
 
-  const handleUnmute = useCallback(() => {
-    playerRef.current?.unMute()
+  const handleUnmute = () => {
+    sendCommand('unMute')
     setIsMuted(false)
-  }, [])
+  }
 
-  const handleVolumeUp = useCallback(() => {
-    if (playerRef.current) {
-      const currentVolume = playerRef.current.getVolume()
-      const newVolume = Math.min(100, currentVolume + 10)
-      playerRef.current.setVolume(newVolume)
-      setVolume(newVolume)
-      if (newVolume > 0 && playerRef.current.isMuted()) {
-        playerRef.current.unMute()
-        setIsMuted(false)
+  const handleFullscreen = () => {
+    if (iframeRef.current) {
+      if (iframeRef.current.requestFullscreen) {
+        iframeRef.current.requestFullscreen()
+      } else if ((iframeRef.current as any).webkitRequestFullscreen) {
+        (iframeRef.current as any).webkitRequestFullscreen()
+      } else if ((iframeRef.current as any).mozRequestFullScreen) {
+        (iframeRef.current as any).mozRequestFullScreen()
+      } else if ((iframeRef.current as any).msRequestFullscreen) {
+        (iframeRef.current as any).msRequestFullscreen()
       }
     }
-  }, [])
-
-  const handleVolumeDown = useCallback(() => {
-    if (playerRef.current) {
-      const currentVolume = playerRef.current.getVolume()
-      const newVolume = Math.max(0, currentVolume - 10)
-      playerRef.current.setVolume(newVolume)
-      setVolume(newVolume)
-    }
-  }, [])
-
-  const handleSeekForward = useCallback(() => {
-    if (playerRef.current) {
-      const currentTime = playerRef.current.getCurrentTime()
-      playerRef.current.seekTo(currentTime + 10, true)
-    }
-  }, [])
-
-  const handleSeekBackward = useCallback(() => {
-    if (playerRef.current) {
-      const currentTime = playerRef.current.getCurrentTime()
-      playerRef.current.seekTo(Math.max(0, currentTime - 10), true)
-    }
-  }, [])
-
-  const handleFullscreen = useCallback(() => {
-    const iframe = document.querySelector('#youtube-player') as HTMLIFrameElement
-    if (iframe) {
-      if (iframe.requestFullscreen) {
-        iframe.requestFullscreen()
-      } else if ((iframe as any).webkitRequestFullscreen) {
-        (iframe as any).webkitRequestFullscreen()
-      } else if ((iframe as any).mozRequestFullScreen) {
-        (iframe as any).mozRequestFullScreen()
-      } else if ((iframe as any).msRequestFullscreen) {
-        (iframe as any).msRequestFullscreen()
-      }
-    }
-  }, [])
+  }
 
   const generateStreamSessionId = (videoId: string, title: string): string => {
     const today = new Date().toISOString().split('T')[0]
@@ -423,7 +332,7 @@ export default function StreamPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-2 sm:p-4 space-y-3">
         {/* Video Player */}
-        <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl relative" ref={playerContainerRef}>
+        <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl relative">
           {iframeLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
@@ -432,7 +341,18 @@ export default function StreamPage() {
               </div>
             </div>
           )}
-          <div id="youtube-player" className="w-full h-full" />
+          <iframe
+            ref={iframeRef}
+            width="100%"
+            height="100%"
+            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`}
+            title="Church Live Stream"
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+            onLoad={() => setIframeLoading(false)}
+            style={{ pointerEvents: 'auto' }}
+          />
         </div>
 
         {/* Custom Video Controls */}
@@ -487,51 +407,6 @@ export default function StreamPage() {
                 Mute
               </Button>
             )}
-
-            {/* Volume Controls */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleVolumeDown}
-              className="bg-gray-700/50 border-gray-600 text-white"
-              data-testid="button-volume-down"
-            >
-              <Minus className="h-4 w-4 mr-1" />
-              Vol-
-            </Button>
-            <span className="text-white text-sm px-2 min-w-[3rem] text-center" data-testid="text-volume">{volume}%</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleVolumeUp}
-              className="bg-gray-700/50 border-gray-600 text-white"
-              data-testid="button-volume-up"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Vol+
-            </Button>
-
-            {/* Seek Controls */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSeekBackward}
-              className="bg-gray-700/50 border-gray-600 text-white"
-              data-testid="button-seek-backward"
-            >
-              <SkipBack className="h-4 w-4 mr-1" />
-              -10s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSeekForward}
-              className="bg-gray-700/50 border-gray-600 text-white"
-              data-testid="button-seek-forward"
-            >
-              <SkipForward className="h-4 w-4 mr-1" />
-              +10s
-            </Button>
 
             {/* Fullscreen */}
             <Button
