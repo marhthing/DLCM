@@ -1,11 +1,20 @@
 
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer, User } from 'lucide-react'
+import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, SkipBack, SkipForward, Plus, Minus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+
+// Extend Window interface for YouTube API
+declare global {
+  interface Window {
+    YT: typeof YT;
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
 
 export default function StreamPage() {
   const router = useRouter()
@@ -21,6 +30,14 @@ export default function StreamPage() {
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
+  
+  // YouTube Player API refs and state
+  const playerRef = useRef<YT.Player | null>(null)
+  const playerContainerRef = useRef<HTMLDivElement>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [volume, setVolume] = useState(100)
+  const [ytApiReady, setYtApiReady] = useState(false)
 
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
@@ -69,6 +86,131 @@ export default function StreamPage() {
       console.error('Failed to fetch stream title:', error)
     }
   }
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.YT) {
+      const tag = document.createElement('script')
+      tag.src = 'https://www.youtube.com/iframe_api'
+      const firstScriptTag = document.getElementsByTagName('script')[0]
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag)
+
+      window.onYouTubeIframeAPIReady = () => {
+        setYtApiReady(true)
+      }
+    } else if (window.YT && window.YT.Player) {
+      setYtApiReady(true)
+    }
+  }, [])
+
+  // Initialize YouTube Player when API is ready and we have settings
+  useEffect(() => {
+    if (!ytApiReady || !streamSettings?.youtubeUrl || playerRef.current) return
+
+    const videoId = extractVideoId(streamSettings.youtubeUrl)
+    if (!videoId) return
+
+    playerRef.current = new window.YT.Player('youtube-player', {
+      videoId: videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        modestbranding: 1,
+        rel: 0,
+        showinfo: 0,
+        fs: 0,
+        iv_load_policy: 3,
+        disablekb: 1,
+      },
+      events: {
+        onReady: (event: YT.PlayerEvent) => {
+          setIframeLoading(false)
+          setVolume(event.target.getVolume())
+          setIsMuted(event.target.isMuted())
+        },
+        onStateChange: (event: YT.OnStateChangeEvent) => {
+          setIsPlaying(event.data === window.YT.PlayerState.PLAYING)
+        },
+      },
+    })
+
+    return () => {
+      if (playerRef.current) {
+        playerRef.current.destroy()
+        playerRef.current = null
+      }
+    }
+  }, [ytApiReady, streamSettings])
+
+  // Player control functions
+  const handlePlay = useCallback(() => {
+    playerRef.current?.playVideo()
+  }, [])
+
+  const handlePause = useCallback(() => {
+    playerRef.current?.pauseVideo()
+  }, [])
+
+  const handleMute = useCallback(() => {
+    playerRef.current?.mute()
+    setIsMuted(true)
+  }, [])
+
+  const handleUnmute = useCallback(() => {
+    playerRef.current?.unMute()
+    setIsMuted(false)
+  }, [])
+
+  const handleVolumeUp = useCallback(() => {
+    if (playerRef.current) {
+      const currentVolume = playerRef.current.getVolume()
+      const newVolume = Math.min(100, currentVolume + 10)
+      playerRef.current.setVolume(newVolume)
+      setVolume(newVolume)
+      if (newVolume > 0 && playerRef.current.isMuted()) {
+        playerRef.current.unMute()
+        setIsMuted(false)
+      }
+    }
+  }, [])
+
+  const handleVolumeDown = useCallback(() => {
+    if (playerRef.current) {
+      const currentVolume = playerRef.current.getVolume()
+      const newVolume = Math.max(0, currentVolume - 10)
+      playerRef.current.setVolume(newVolume)
+      setVolume(newVolume)
+    }
+  }, [])
+
+  const handleSeekForward = useCallback(() => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.getCurrentTime()
+      playerRef.current.seekTo(currentTime + 10, true)
+    }
+  }, [])
+
+  const handleSeekBackward = useCallback(() => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.getCurrentTime()
+      playerRef.current.seekTo(Math.max(0, currentTime - 10), true)
+    }
+  }, [])
+
+  const handleFullscreen = useCallback(() => {
+    const iframe = document.querySelector('#youtube-player') as HTMLIFrameElement
+    if (iframe) {
+      if (iframe.requestFullscreen) {
+        iframe.requestFullscreen()
+      } else if ((iframe as any).webkitRequestFullscreen) {
+        (iframe as any).webkitRequestFullscreen()
+      } else if ((iframe as any).mozRequestFullScreen) {
+        (iframe as any).mozRequestFullScreen()
+      } else if ((iframe as any).msRequestFullscreen) {
+        (iframe as any).msRequestFullscreen()
+      }
+    }
+  }, [])
 
   const generateStreamSessionId = (videoId: string, title: string): string => {
     const today = new Date().toISOString().split('T')[0]
@@ -276,7 +418,7 @@ export default function StreamPage() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-2 sm:p-4 space-y-3">
         {/* Video Player */}
-        <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl relative">
+        <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-2xl relative" ref={playerContainerRef}>
           {iframeLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
@@ -285,17 +427,119 @@ export default function StreamPage() {
               </div>
             </div>
           )}
-          <iframe
-            width="100%"
-            height="100%"
-            src={`${streamSettings.youtubeUrl}?autoplay=1&mute=0&fs=1&modestbranding=1&rel=0&showinfo=0&enablejsapi=1`}
-            title="Church Live Stream"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-            allowFullScreen
-            onLoad={() => setIframeLoading(false)}
-            style={{ pointerEvents: 'auto' }}
-          />
+          <div id="youtube-player" className="w-full h-full" />
+        </div>
+
+        {/* Custom Video Controls */}
+        <div className="bg-gray-800/70 backdrop-blur-sm rounded-lg p-3 sm:p-4">
+          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+            {/* Play/Pause */}
+            {isPlaying ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePause}
+                className="bg-gray-700/50 border-gray-600 text-white"
+                data-testid="button-pause"
+              >
+                <Pause className="h-4 w-4 mr-1" />
+                Pause
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePlay}
+                className="bg-gray-700/50 border-gray-600 text-white"
+                data-testid="button-play"
+              >
+                <Play className="h-4 w-4 mr-1" />
+                Play
+              </Button>
+            )}
+
+            {/* Mute/Unmute */}
+            {isMuted ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUnmute}
+                className="bg-gray-700/50 border-gray-600 text-white"
+                data-testid="button-unmute"
+              >
+                <VolumeX className="h-4 w-4 mr-1" />
+                Unmute
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMute}
+                className="bg-gray-700/50 border-gray-600 text-white"
+                data-testid="button-mute"
+              >
+                <Volume2 className="h-4 w-4 mr-1" />
+                Mute
+              </Button>
+            )}
+
+            {/* Volume Controls */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleVolumeDown}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-volume-down"
+            >
+              <Minus className="h-4 w-4 mr-1" />
+              Vol-
+            </Button>
+            <span className="text-white text-sm px-2 min-w-[3rem] text-center" data-testid="text-volume">{volume}%</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleVolumeUp}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-volume-up"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Vol+
+            </Button>
+
+            {/* Seek Controls */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSeekBackward}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-seek-backward"
+            >
+              <SkipBack className="h-4 w-4 mr-1" />
+              -10s
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSeekForward}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-seek-forward"
+            >
+              <SkipForward className="h-4 w-4 mr-1" />
+              +10s
+            </Button>
+
+            {/* Fullscreen */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFullscreen}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-fullscreen"
+            >
+              <Maximize className="h-4 w-4 mr-1" />
+              Fullscreen
+            </Button>
+          </div>
         </div>
 
         {/* Video Title */}
