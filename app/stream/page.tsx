@@ -241,6 +241,16 @@ export default function StreamPage() {
         }, 30000)
 
         sendHeartbeat()
+
+        // Start active viewers polling
+        const fetchActiveViewers = () => {
+          fetch('/api/attendance/active-count')
+            .then(res => res.json())
+            .then(data => setActiveViewersCount(data.count || 0))
+            .catch(console.error)
+        }
+        fetchActiveViewers()
+        activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
       } catch (error) {
         console.error('Failed to check existing session:', error)
       }
@@ -272,15 +282,6 @@ export default function StreamPage() {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
     }
   }, [currentStartTimeRef.current])
-
-        const fetchActiveViewers = () => {
-          fetch('/api/attendance/active-count')
-            .then(res => res.json())
-            .then(data => setActiveViewersCount(data.count || 0))
-            .catch(console.error)
-        }
-        fetchActiveViewers()
-        activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
 
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
