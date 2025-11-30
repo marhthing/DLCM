@@ -235,18 +235,43 @@ export default function StreamPage() {
           setElapsedSeconds(0)
         }
 
-        // Start heartbeat and timer
+        // Start heartbeat
         heartbeatIntervalRef.current = setInterval(() => {
           sendHeartbeat()
         }, 30000)
 
         sendHeartbeat()
+      } catch (error) {
+        console.error('Failed to check existing session:', error)
+      }
+    }
 
-        // Start timer interval - update every second
-        timerIntervalRef.current = setInterval(() => {
-          const elapsed = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
-          setElapsedSeconds(elapsed)
-        }, 1000)
+    initializeSession()
+  }, [streamSettings, user, streamTitle])
+
+  // Cleanup effect for session intervals
+  useEffect(() => {
+    return () => {
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
+      if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
+      sendFinalHeartbeat()
+    }
+  }, [])
+
+  // Separate effect for timer - runs independently and continuously
+  useEffect(() => {
+    if (!currentStartTimeRef.current) return
+
+    // Start timer interval - update every second
+    timerIntervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
+      setElapsedSeconds(elapsed)
+    }, 1000)
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+    }
+  }, [currentStartTimeRef.current])
 
         const fetchActiveViewers = () => {
           fetch('/api/attendance/active-count')
@@ -256,21 +281,6 @@ export default function StreamPage() {
         }
         fetchActiveViewers()
         activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 5000)
-      } catch (error) {
-        console.error('Failed to check existing session:', error)
-      }
-    }
-
-    initializeSession()
-
-    return () => {
-      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current)
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
-      if (activeViewersIntervalRef.current) clearInterval(activeViewersIntervalRef.current)
-      
-      sendFinalHeartbeat()
-    }
-  }, [streamSettings, user, streamTitle])
 
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
