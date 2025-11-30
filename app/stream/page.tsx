@@ -27,6 +27,12 @@ export default function StreamPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
+  const [origin, setOrigin] = useState('')
+  
+  // Set origin after mount to avoid hydration mismatch
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
 
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
@@ -133,7 +139,7 @@ export default function StreamPage() {
       if (videoId) {
         // Force reload by adding a timestamp to bust cache
         const timestamp = Date.now()
-        iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}&t=${timestamp}`
+        iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}&t=${timestamp}`
         setIsPlaying(true)
         setIframeLoading(true)
       }
@@ -359,7 +365,7 @@ export default function StreamPage() {
             ref={iframeRef}
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}`}
+            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
