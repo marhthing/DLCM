@@ -48,8 +48,9 @@ export default function AdminDashboard() {
     }
   }, [router])
 
-  const { data: attendanceRecords = [], isLoading: isLoadingRecords } = useQuery<AttendanceRecord[]>({
+  const { data: attendanceRecords = [], isLoading: isLoadingRecords, isError, error } = useQuery<AttendanceRecord[]>({
     queryKey: ['/api/attendance/records'],
+    refetchInterval: 30000, // Refetch every 30 seconds
   })
 
   const { data: streamSettings } = useQuery<StreamSettings>({
@@ -387,6 +388,11 @@ export default function AdminDashboard() {
               <p className="text-center py-8 text-muted-foreground" data-testid="text-loading-records">
                 Loading attendance records...
               </p>
+            ) : isError ? (
+              <div className="text-center py-8" data-testid="text-error-records">
+                <p className="text-red-500 mb-2">Error loading attendance records</p>
+                <p className="text-muted-foreground text-sm">{error?.message || 'Unknown error'}</p>
+              </div>
             ) : attendanceRecords.length === 0 ? (
               <p className="text-center py-8 text-muted-foreground" data-testid="text-no-records">
                 No attendance records yet
