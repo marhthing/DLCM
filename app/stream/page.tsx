@@ -35,6 +35,38 @@ export default function StreamPage() {
     setOrigin(window.location.origin)
   }, [])
 
+  // Listen to YouTube player state changes
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from YouTube
+      if (event.origin !== 'https://www.youtube.com') return
+
+      try {
+        const data = JSON.parse(event.data)
+        
+        // YouTube sends state updates via postMessage
+        if (data.event === 'infoDelivery' && data.info?.playerState !== undefined) {
+          const playerState = data.info.playerState
+          
+          // YouTube player states:
+          // -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
+          if (playerState === 1) {
+            setIsPlaying(true)
+            setShowJumpToLive(false)
+          } else if (playerState === 2) {
+            setIsPlaying(false)
+            setShowJumpToLive(true)
+          }
+        }
+      } catch (e) {
+        // Ignore parsing errors
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
+
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
     if (!storedUser) {
@@ -410,12 +442,21 @@ export default function StreamPage() {
             ref={iframeRef}
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}`}
+            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&widgetid=1${origin ? `&origin=${origin}` : ''}`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
-            onLoad={() => setIframeLoading(false)}
+            onLoad={() => {
+              setIframeLoading(false)
+              // Request state updates from YouTube player
+              if (iframeRef.current?.contentWindow) {
+                iframeRef.current.contentWindow.postMessage(
+                  JSON.stringify({ event: 'listening', id: 1 }),
+                  '*'
+                )
+              }
+            }}
           />
         </div>
 
