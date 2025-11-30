@@ -52,7 +52,7 @@ export default function StreamPage() {
           // -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
           if (playerState === 1) {
             setIsPlaying(true)
-            setShowJumpToLive(false)
+            // Don't hide Jump to Live button here - only hide it when user explicitly jumps
           } else if (playerState === 2) {
             setIsPlaying(false)
             setShowJumpToLive(true)
