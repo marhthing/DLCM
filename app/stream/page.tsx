@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react'
+import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, Radio } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -122,6 +122,20 @@ export default function StreamPage() {
         (iframeRef.current as any).mozRequestFullScreen()
       } else if ((iframeRef.current as any).msRequestFullscreen) {
         (iframeRef.current as any).msRequestFullscreen()
+      }
+    }
+  }
+
+  // Jump to live - reloads the iframe to get back to the live stream position
+  const handleGoLive = () => {
+    if (iframeRef.current && streamSettings?.youtubeUrl) {
+      const videoId = extractVideoId(streamSettings.youtubeUrl)
+      if (videoId) {
+        // Force reload by adding a timestamp to bust cache
+        const timestamp = Date.now()
+        iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : ''}&t=${timestamp}`
+        setIsPlaying(true)
+        setIframeLoading(true)
       }
     }
   }
@@ -407,6 +421,18 @@ export default function StreamPage() {
                 Mute
               </Button>
             )}
+
+            {/* Go Live - Jump to live stream */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGoLive}
+              className="bg-red-600/80 border-red-500 text-white"
+              data-testid="button-go-live"
+            >
+              <Radio className="h-4 w-4 mr-1" />
+              Go Live
+            </Button>
 
             {/* Fullscreen */}
             <Button
