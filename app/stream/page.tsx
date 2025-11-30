@@ -415,7 +415,6 @@ export default function StreamPage() {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
             onLoad={() => setIframeLoading(false)}
-            style={{ pointerEvents: 'none' }}
           />
         </div>
 
