@@ -175,9 +175,9 @@ export default function StreamPage() {
       if (videoId) {
         // Force reload by adding a timestamp to bust cache
         const timestamp = Date.now()
-        iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}&t=${timestamp}`
+        iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&playsinline=1&iv_load_policy=3${origin ? `&origin=${origin}` : ''}&t=${timestamp}`
         setIsPlaying(true)
-        setIframeLoading(true)
+        // Don't show loading state for jump to live - it's faster
         setShowJumpToLive(false)
       }
     }
@@ -317,6 +317,13 @@ export default function StreamPage() {
     }
   }, [currentStartTimeRef.current])
 
+  // Preload iframe when stream settings are available
+  useEffect(() => {
+    if (streamSettings?.youtubeUrl && iframeRef.current) {
+      setIframeLoading(false) // Remove loading state faster
+    }
+  }, [streamSettings])
+
   const sendHeartbeat = async () => {
     if (!user || !streamSessionIdRef.current) return
 
@@ -444,11 +451,12 @@ export default function StreamPage() {
             ref={iframeRef}
             width="100%"
             height="100%"
-            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&widgetid=1${origin ? `&origin=${origin}` : ''}`}
+            src={`https://www.youtube.com/embed/${extractVideoId(streamSettings.youtubeUrl)}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1&widgetid=1&playsinline=1&iv_load_policy=3${origin ? `&origin=${origin}` : ''}`}
             title="Church Live Stream"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
+            loading="eager"
             onLoad={() => {
               setIframeLoading(false)
               // Request state updates from YouTube player
@@ -458,6 +466,10 @@ export default function StreamPage() {
                   '*'
                 )
               }
+            }}
+            onError={() => {
+              console.error('Failed to load YouTube stream')
+              setIframeLoading(false)
             }}
           />
         </div>
