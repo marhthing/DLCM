@@ -49,7 +49,10 @@ export default function StreamPage() {
     setUser(parsedUser)
     
     fetch('/api/stream/settings')
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch settings')
+        return res.json()
+      })
       .then(data => {
         setStreamSettings(data)
         if (data.youtubeUrl) {
@@ -59,7 +62,9 @@ export default function StreamPage() {
           }
         }
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error('Error fetching stream settings:', err)
+      })
   }, [router])
 
   const extractVideoId = (url: string): string | null => {

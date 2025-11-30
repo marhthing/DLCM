@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server'
 import { SupabaseStorage } from '@/lib/supabase-storage'
 
@@ -10,9 +9,22 @@ export async function GET() {
     if (!settings) {
       return NextResponse.json({ message: 'Stream settings not found' }, { status: 404 })
     }
-    return NextResponse.json(settings)
+    return NextResponse.json(settings, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
   } catch (error) {
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 })
+    console.error('Error fetching stream settings:', error)
+    return NextResponse.json(
+      { message: 'Internal server error' },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    )
   }
 }
 
