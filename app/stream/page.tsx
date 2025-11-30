@@ -28,10 +28,32 @@ export default function StreamPage() {
   const [isPlaying, setIsPlaying] = useState(true)
   const [isMuted, setIsMuted] = useState(false)
   const [origin, setOrigin] = useState('')
+  const [isBehindLive, setIsBehindLive] = useState(false)
   
   // Set origin after mount to avoid hydration mismatch
   useEffect(() => {
     setOrigin(window.location.origin)
+    
+    // Listen for player state changes
+    const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== 'https://www.youtube.com') return
+      
+      try {
+        const data = JSON.parse(event.data)
+        // YouTube sends player state info
+        if (data.info && data.info.currentTime && data.info.duration) {
+          const currentTime = data.info.currentTime
+          const duration = data.info.duration
+          // If more than 10 seconds behind live (duration - currentTime > 10), show glow
+          setIsBehindLive(duration - currentTime > 10)
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+    
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
   }, [])
 
   useEffect(() => {
@@ -142,6 +164,7 @@ export default function StreamPage() {
         iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&controls=0&modestbranding=1&rel=0&showinfo=0&enablejsapi=1${origin ? `&origin=${origin}` : ''}&t=${timestamp}`
         setIsPlaying(true)
         setIframeLoading(true)
+        setIsBehindLive(false)
       }
     }
   }
@@ -371,7 +394,7 @@ export default function StreamPage() {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
             onLoad={() => setIframeLoading(false)}
-            style={{ pointerEvents: 'auto' }}
+            style={{ pointerEvents: 'none' }}
           />
         </div>
 
@@ -433,7 +456,7 @@ export default function StreamPage() {
               variant="outline"
               size="sm"
               onClick={handleGoLive}
-              className="bg-red-600/80 border-red-500 text-white"
+              className={`bg-red-600/80 border-red-500 text-white ${isBehindLive ? 'animate-pulse ring-2 ring-red-400' : ''}`}
               data-testid="button-go-live"
             >
               <Radio className="h-4 w-4 mr-1" />
