@@ -35,7 +35,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="DLBC Pontypridd" />
         <meta name="theme-color" content="#3b82f6" />
-        <link rel="apple-touch-icon" href="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" />
+        <link rel="apple-touch-icon" href="/church-logo.jpg" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <ServiceWorkerRegister />

@@ -1,23 +1,44 @@
 
-const CACHE_NAME = 'dlbc-pontypridd-v1';
+const CACHE_NAME = 'dlbc-pontypridd-v2';
 const urlsToCache = [
   '/',
   '/stream',
   '/admin/login',
-  '/admin/dashboard'
+  '/admin/dashboard',
+  '/church-logo.jpg',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+      .then((cache) => {
+        return cache.addAll(urlsToCache).catch((err) => {
+          console.log('Cache addAll error:', err);
+        });
+      })
+      .then(() => self.skipWaiting())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
-      .then((response) => response || fetch(event.request))
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).then((response) => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        });
+      })
   );
 });
 
@@ -31,6 +52,6 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
