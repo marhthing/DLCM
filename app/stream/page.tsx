@@ -377,7 +377,7 @@ export default function StreamPage() {
             .catch(console.error)
         }
         fetchActiveViewers()
-        activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 30000)
+        activeViewersIntervalRef.current = setInterval(fetchActiveViewers, 31000)
       } catch (error) {
         console.error('Failed to check existing session:', error)
       }
