@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
 import Footer from '@/components/footer'
+import ServiceWorkerRegister from '@/components/service-worker-register'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -35,19 +36,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="DLBC Pontypridd" />
         <meta name="theme-color" content="#3b82f6" />
         <link rel="apple-touch-icon" href="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                  navigator.serviceWorker.register('/sw.js');
-                });
-              }
-            `,
-          }}
-        />
       </head>
       <body className={inter.className} suppressHydrationWarning>
+        <ServiceWorkerRegister />
         <Providers>
           <div className="pb-16">
             {children}
