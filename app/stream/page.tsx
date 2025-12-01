@@ -572,6 +572,15 @@ export default function StreamPage() {
                   JSON.stringify({ event: 'listening', id: 1 }),
                   '*'
                 )
+                // For live streams, automatically seek to live edge after a short delay
+                if (isLiveStream) {
+                  setTimeout(() => {
+                    iframeRef.current?.contentWindow?.postMessage(
+                      JSON.stringify({ event: 'command', func: 'seekTo', args: [9999999, true] }),
+                      '*'
+                    )
+                  }, 1000)
+                }
               }
             }}
             onError={() => {
@@ -634,13 +643,13 @@ export default function StreamPage() {
               </Button>
             )}
 
-            {/* Jump to Live - Only show when user has paused or rewinded */}
-            {showJumpToLive && (
+            {/* Jump to Live - Always show for live streams */}
+            {isLiveStream && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleGoLive}
-                className="bg-red-600/80 border-red-500 text-white animate-pulse ring-2 ring-red-400"
+                className={`border-red-500 text-white ${showJumpToLive ? 'bg-red-600/80 animate-pulse ring-2 ring-red-400' : 'bg-red-600/50'}`}
                 data-testid="button-go-live"
               >
                 <Radio className="h-4 w-4 mr-1" />
