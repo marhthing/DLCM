@@ -520,7 +520,7 @@ export default function StreamPage() {
             <div className="flex items-center gap-2 text-xs">
               <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md">
                 <Clock className="h-3 w-3" />
-                <span className="hidden sm:inline">{format(currentTime, 'h:mm a')}</span>
+                <span>{format(currentTime, 'h:mm a')}</span>
               </div>
               <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
                 <Timer className="h-3 w-3" />
