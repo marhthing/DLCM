@@ -322,7 +322,7 @@ export default function StreamPage() {
             lastStreamSessionId: sessionId
           }
           setUser(updatedUser)
-          localStorage.setItem('churchUser', JSON.JSON.stringify(updatedUser))
+          localStorage.setItem('churchUser', JSON.stringify(updatedUser))
 
           // Set initial elapsed time to 0
           setElapsedSeconds(0)
