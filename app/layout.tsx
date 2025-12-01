@@ -10,6 +10,7 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Deeper Life Bible Church - Pontypridd Region',
   description: 'Watch live services from Deeper Life Bible Church, Pontypridd Region and track your attendance online.',
+  manifest: '/manifest.json',
   openGraph: {
     title: 'Deeper Life Bible Church - Pontypridd Region',
     description: 'Watch live services from Deeper Life Bible Church, Pontypridd Region and track your attendance online.',
@@ -27,6 +28,24 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" type="image/png" href="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="DLBC Pontypridd" />
+        <meta name="theme-color" content="#3b82f6" />
+        <link rel="apple-touch-icon" href="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </head>
       <body className={inter.className} suppressHydrationWarning>
         <Providers>
