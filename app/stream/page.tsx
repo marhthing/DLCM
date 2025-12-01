@@ -395,9 +395,16 @@ export default function StreamPage() {
     }
   }, [])
 
-  // Separate effect for timer - runs independently and continuously
+  // Separate effect for timer - runs only when attendance is active
   useEffect(() => {
-    if (!currentStartTimeRef.current) return
+    if (!currentStartTimeRef.current || !isAttendanceActive) {
+      // Stop timer if attendance is not active
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+      }
+      return
+    }
 
     // Start timer interval - update every second
     timerIntervalRef.current = setInterval(() => {
@@ -408,7 +415,7 @@ export default function StreamPage() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
     }
-  }, [currentStartTimeRef.current])
+  }, [currentStartTimeRef.current, isAttendanceActive])
 
   // Preload iframe when stream settings are available
   useEffect(() => {
