@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'dlbc-pontypridd-v2';
+const CACHE_NAME = 'dlbc-pontypridd-v3';
 const urlsToCache = [
   '/',
   '/stream',
@@ -22,6 +22,15 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  
+  // Never cache API requests - always fetch from network
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+  
+  // For non-API requests, use cache-first strategy
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
