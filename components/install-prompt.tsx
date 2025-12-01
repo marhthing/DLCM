@@ -65,53 +65,53 @@ export default function InstallPrompt() {
   }
 
   return (
-    <Card className="border-primary/50 shadow-lg">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <Download className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Install App</CardTitle>
+    <Card className="border-primary/50 shadow-lg w-full">
+      <CardHeader className="pb-3 px-4 pt-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Download className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+            <CardTitle className="text-base sm:text-lg truncate">Install App</CardTitle>
           </div>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 -mt-1 -mr-1"
+            className="h-6 w-6 flex-shrink-0"
             onClick={handleDismiss}
           >
             <X className="h-4 w-4" />
           </Button>
         </div>
-        <CardDescription>
-          Install DLBC Pontypridd app for quick access and offline features
+        <CardDescription className="text-xs sm:text-sm">
+          Install for quick access and offline features
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-4 pb-4">
         {isIOS ? (
           <div className="space-y-2">
-            <div className="flex items-start gap-2 text-sm">
-              <Apple className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              <div>
+            <div className="flex items-start gap-2 text-xs sm:text-sm">
+              <Apple className="h-4 w-4 sm:h-5 sm:w-5 mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
                 <p className="font-medium mb-1">iOS Installation:</p>
-                <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-                  <li>Tap the Share button below</li>
-                  <li>Scroll and tap "Add to Home Screen"</li>
-                  <li>Tap "Add" to confirm</li>
+                <ol className="list-decimal list-inside space-y-1 text-muted-foreground text-xs sm:text-sm">
+                  <li>Tap Share button (⬆️)</li>
+                  <li>Tap "Add to Home Screen"</li>
+                  <li>Tap "Add"</li>
                 </ol>
               </div>
             </div>
           </div>
         ) : deferredPrompt ? (
-          <Button onClick={handleInstall} className="w-full" size="lg">
-            <Chrome className="mr-2 h-5 w-5" />
+          <Button onClick={handleInstall} className="w-full" size="default">
+            <Chrome className="mr-2 h-4 w-4" />
             Install Now
           </Button>
         ) : (
-          <div className="text-sm text-muted-foreground">
-            <p className="mb-2 font-medium">To install on Android/Chrome:</p>
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            <p className="mb-2 font-medium">Android/Chrome:</p>
             <ol className="list-decimal list-inside space-y-1">
-              <li>Tap the menu (⋮) in your browser</li>
-              <li>Select "Install app" or "Add to Home Screen"</li>
-              <li>Tap "Install" to confirm</li>
+              <li>Tap menu (⋮)</li>
+              <li>Select "Install app"</li>
+              <li>Tap "Install"</li>
             </ol>
           </div>
         )}
