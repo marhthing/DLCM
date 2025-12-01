@@ -31,10 +31,19 @@ export default function StreamPage() {
   const [showJumpToLive, setShowJumpToLive] = useState(false)
   const [isLiveStream, setIsLiveStream] = useState(true) // Track if stream is actually live
   const [liveStatusChecked, setLiveStatusChecked] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   // Set origin after mount to avoid hydration mismatch
   useEffect(() => {
     setOrigin(window.location.origin)
+  }, [])
+
+  // Update current time every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(interval)
   }, [])
 
   // Listen to YouTube player state changes
@@ -470,7 +479,7 @@ export default function StreamPage() {
             <div className="flex items-center gap-2 text-xs">
               <div className="flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 rounded-md">
                 <Clock className="h-3 w-3" />
-                <span className="hidden sm:inline">{format(new Date(currentStartTimeRef.current), 'h:mm a')}</span>
+                <span className="hidden sm:inline">{format(currentTime, 'h:mm a')}</span>
               </div>
               <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
                 <Timer className="h-3 w-3" />
