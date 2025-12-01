@@ -81,10 +81,11 @@ export default function AdminDashboard() {
 
   const toggleAttendanceMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
-      return apiRequest('POST', '/api/attendance/toggle', { isActive })
+      const response = await apiRequest('POST', '/api/attendance/toggle', { isActive })
+      return response.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stream/settings'] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(['/api/stream/settings'], data)
       toast({
         title: 'Success',
         description: 'Attendance tracking updated!',
