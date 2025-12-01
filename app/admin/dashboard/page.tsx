@@ -53,7 +53,7 @@ export default function AdminDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds
   })
 
-  const { data: streamSettings } = useQuery<StreamSettings>({
+  const { data: streamSettings, refetch: refetchSettings } = useQuery<StreamSettings>({
     queryKey: ['/api/stream/settings'],
   })
 
@@ -83,8 +83,8 @@ export default function AdminDashboard() {
     mutationFn: async (isActive: boolean) => {
       return apiRequest('POST', '/api/attendance/toggle', { isActive })
     },
-    onSuccess: (data) => {
-      queryClient.setQueryData(['/api/stream/settings'], data)
+    onSuccess: async () => {
+      await refetchSettings()
       toast({
         title: 'Success',
         description: 'Attendance tracking updated!',
