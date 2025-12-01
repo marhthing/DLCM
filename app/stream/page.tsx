@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
@@ -23,7 +22,7 @@ export default function StreamPage() {
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
-  
+
   // YouTube Player control state
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [isPlaying, setIsPlaying] = useState(true)
@@ -32,7 +31,7 @@ export default function StreamPage() {
   const [showJumpToLive, setShowJumpToLive] = useState(false)
   const [isLiveStream, setIsLiveStream] = useState(true) // Track if stream is actually live
   const [liveStatusChecked, setLiveStatusChecked] = useState(false)
-  
+
   // Set origin after mount to avoid hydration mismatch
   useEffect(() => {
     setOrigin(window.location.origin)
@@ -46,11 +45,11 @@ export default function StreamPage() {
 
       try {
         const data = JSON.parse(event.data)
-        
+
         // YouTube sends state updates via postMessage
         if (data.event === 'infoDelivery' && data.info?.playerState !== undefined) {
           const playerState = data.info.playerState
-          
+
           // YouTube player states:
           // -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
           if (playerState === 1) {
@@ -59,32 +58,6 @@ export default function StreamPage() {
           } else if (playerState === 2) {
             setIsPlaying(false)
             setShowJumpToLive(true)
-          } else if (playerState === 0) {
-            // Video ended - likely means live stream ended and became a recorded video
-            setIsPlaying(false)
-            setIsLiveStream(false)
-            if (heartbeatIntervalRef.current) {
-              console.log('Video ended, stopping attendance tracking')
-              clearInterval(heartbeatIntervalRef.current)
-              heartbeatIntervalRef.current = null
-              sendFinalHeartbeat()
-            }
-          }
-        }
-        
-        // Check if video has duration (recorded) vs no duration (live)
-        if (data.event === 'infoDelivery' && data.info?.duration !== undefined) {
-          const duration = data.info.duration
-          // If duration is a finite number > 0, it's a recorded video
-          // Live streams have duration = 0 or undefined
-          if (duration > 0 && isFinite(duration)) {
-            console.log('Video has duration, marking as recorded')
-            setIsLiveStream(false)
-            if (heartbeatIntervalRef.current) {
-              clearInterval(heartbeatIntervalRef.current)
-              heartbeatIntervalRef.current = null
-              sendFinalHeartbeat()
-            }
           }
         }
       } catch (e) {
@@ -104,7 +77,7 @@ export default function StreamPage() {
     }
     const parsedUser = JSON.parse(storedUser)
     setUser(parsedUser)
-    
+
     fetch('/api/stream/settings')
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch settings')
@@ -167,7 +140,7 @@ export default function StreamPage() {
       // Start monitoring for status changes
       cleanup = await monitorLiveStatus(videoId, (newStatus) => {
         setIsLiveStream(newStatus)
-        
+
         // If stream went from live to recorded, stop heartbeat
         if (!newStatus && heartbeatIntervalRef.current) {
           console.log('Stream is no longer live, stopping attendance tracking')
@@ -283,12 +256,12 @@ export default function StreamPage() {
       try {
         const response = await fetch('/api/attendance/records')
         const records = await response.json()
-        
+
         // Find existing record for this user and stream session (today's session only)
         const today = new Date().toISOString().split('T')[0]
         const existingRecord = records.find((record: any) => {
           if (record.email !== user.email || record.streamSessionId !== sessionId) return false
-          
+
           // Check if the record is from today
           const recordDate = new Date(record.startTime).toISOString().split('T')[0]
           return recordDate === today
@@ -299,13 +272,13 @@ export default function StreamPage() {
           const dbStartTime = new Date(existingRecord.startTime).getTime()
           const now = Date.now()
           const timeDiff = now - dbStartTime
-          
+
           // If the time difference is more than 24 hours, it's invalid - start fresh
           if (timeDiff > 24 * 60 * 60 * 1000 || timeDiff < 0) {
             console.warn('Invalid timestamp in database, starting fresh')
             const newStartTime = now
             currentStartTimeRef.current = newStartTime
-            
+
             const updatedUser = {
               ...user,
               startTime: newStartTime,
@@ -317,7 +290,7 @@ export default function StreamPage() {
           } else {
             // Valid timestamp from today
             currentStartTimeRef.current = dbStartTime
-            
+
             const updatedUser = {
               ...user,
               startTime: dbStartTime,
@@ -325,7 +298,7 @@ export default function StreamPage() {
             }
             setUser(updatedUser)
             localStorage.setItem('churchUser', JSON.stringify(updatedUser))
-            
+
             // Set initial elapsed time
             setElapsedSeconds(Math.floor(timeDiff / 1000))
           }
@@ -333,15 +306,15 @@ export default function StreamPage() {
           // New session - create new start time
           const newStartTime = Date.now()
           currentStartTimeRef.current = newStartTime
-          
+
           const updatedUser = {
             ...user,
             startTime: newStartTime,
             lastStreamSessionId: sessionId
           }
           setUser(updatedUser)
-          localStorage.setItem('churchUser', JSON.stringify(updatedUser))
-          
+          localStorage.setItem('churchUser', JSON.JSON.stringify(updatedUser))
+
           // Set initial elapsed time to 0
           setElapsedSeconds(0)
         }
@@ -405,7 +378,7 @@ export default function StreamPage() {
     if (!user || !streamSessionIdRef.current) return
 
     const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
-    
+
     try {
       await fetch('/api/attendance/heartbeat', {
         method: 'POST',
@@ -428,7 +401,7 @@ export default function StreamPage() {
     if (!user || !streamSessionIdRef.current) return
 
     const durationSeconds = Math.floor((Date.now() - currentStartTimeRef.current) / 1000)
-    
+
     const payload = JSON.stringify({
       name: user.name,
       email: user.email,
