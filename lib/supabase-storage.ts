@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { AttendanceRecord, InsertAttendanceRecord, StreamSettings, InsertStreamSettings } from "@/shared/schema";
 import { randomUUID } from "crypto";
@@ -174,16 +173,51 @@ export class SupabaseStorage {
     const { data, error } = await supabase
       .from('stream_settings')
       .select('*')
-      .limit(1)
       .single();
 
-    if (error || !data) {
+    if (error) {
+      console.error('Error fetching stream settings:', error);
+      return undefined;
+    }
+
+    if (!data) {
       return undefined;
     }
 
     return {
       id: data.id,
       youtubeUrl: data.youtube_url,
+      isAttendanceActive: data.is_attendance_active === 'true',
+      updatedAt: data.updated_at,
+    };
+  }
+
+  async toggleAttendance(isActive: boolean): Promise<StreamSettings | undefined> {
+    const settings = await this.getStreamSettings();
+
+    if (!settings) {
+      return undefined;
+    }
+
+    const { data, error } = await supabase
+      .from('stream_settings')
+      .update({
+        is_attendance_active: isActive ? 'true' : 'false',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', settings.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error toggling attendance:', error);
+      return undefined;
+    }
+
+    return {
+      id: data.id,
+      youtubeUrl: data.youtube_url,
+      isAttendanceActive: data.is_attendance_active === 'true',
       updatedAt: data.updated_at,
     };
   }
@@ -193,11 +227,18 @@ export class SupabaseStorage {
     const id = existing?.id || randomUUID();
     const updatedAt = new Date().toISOString();
 
+    // Fix for YouTube URL parsing
+    let youtubeUrl = insertSettings.youtubeUrl;
+    if (youtubeUrl && youtubeUrl.includes('/live/')) {
+        const videoId = youtubeUrl.split('/live/')[1].split('?')[0];
+        youtubeUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+
     const { data, error } = await supabase
       .from('stream_settings')
       .upsert({
         id,
-        youtube_url: insertSettings.youtubeUrl,
+        youtube_url: youtubeUrl, // Use the corrected URL
         updated_at: updatedAt,
       })
       .select()

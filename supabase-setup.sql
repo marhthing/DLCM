@@ -22,6 +22,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_records(timest
 CREATE TABLE IF NOT EXISTS stream_settings (
   id UUID PRIMARY KEY,
   youtube_url TEXT NOT NULL,
+  is_attendance_active TEXT DEFAULT 'false',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

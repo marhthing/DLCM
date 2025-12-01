@@ -263,6 +263,12 @@ export default function StreamPage() {
     // Don't start heartbeat until we have the real stream title (not the default)
     if (streamTitle === 'Live Service') return
 
+    // Don't track attendance if admin has disabled it
+    if (!streamSettings.isAttendanceActive) {
+      console.log('Attendance tracking is disabled by admin')
+      return
+    }
+
     // Don't track attendance if stream is not live
     if (liveStatusChecked && !isLiveStream) {
       console.log('Stream is not live, skipping attendance tracking')

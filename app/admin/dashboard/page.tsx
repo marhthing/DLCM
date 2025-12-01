@@ -79,18 +79,54 @@ export default function AdminDashboard() {
     setCurrentPage(1)
   }, [filterDate, filterTitle])
 
+  const toggleAttendanceMutation = useMutation({
+    mutationFn: async (isActive: boolean) => {
+      return apiRequest('POST', '/api/attendance/toggle', { isActive })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stream/settings'] })
+      toast({
+        title: 'Success',
+        description: 'Attendance tracking updated!',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update attendance tracking.',
+        variant: 'destructive',
+      })
+    },
+  })
+
   const updateUrlMutation = useMutation({
     mutationFn: async (url: string) => {
       let embedUrl = url
-      if (url.includes('youtube.com/watch?v=')) {
+      
+      // Handle /live/ URLs like https://www.youtube.com/live/VIDEO_ID
+      if (url.includes('youtube.com/live/')) {
+        const videoId = url.split('/live/')[1].split('?')[0]
+        embedUrl = `https://www.youtube.com/embed/${videoId}`
+      }
+      // Handle watch URLs
+      else if (url.includes('youtube.com/watch?v=')) {
         const videoId = url.split('v=')[1].split('&')[0]
         embedUrl = `https://www.youtube.com/embed/${videoId}`
-      } else if (url.includes('youtu.be/')) {
+      }
+      // Handle youtu.be short URLs
+      else if (url.includes('youtu.be/')) {
         const videoId = url.split('youtu.be/')[1].split('?')[0]
         embedUrl = `https://www.youtube.com/embed/${videoId}`
-      } else if (!url.includes('embed')) {
+      }
+      // If it's already an embed URL, use as is
+      else if (url.includes('youtube.com/embed/')) {
+        embedUrl = url
+      }
+      // Otherwise, treat it as a video ID
+      else if (!url.includes('http')) {
         embedUrl = `https://www.youtube.com/embed/${url}`
       }
+      
       return apiRequest('PUT', '/api/stream/settings', { url: embedUrl })
     },
     onSuccess: () => {
@@ -337,10 +373,30 @@ export default function AdminDashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Youtube className="text-red-600" data-testid="icon-youtube" />
-              Update YouTube Stream
+              Stream Settings
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+              <div>
+                <h3 className="font-semibold">Attendance Tracking</h3>
+                <p className="text-sm text-muted-foreground">
+                  {streamSettings?.isAttendanceActive ? 'Currently tracking attendance' : 'Attendance tracking disabled'}
+                </p>
+              </div>
+              <Button
+                data-testid="button-toggle-attendance"
+                onClick={() => toggleAttendanceMutation.mutate(!streamSettings?.isAttendanceActive)}
+                disabled={toggleAttendanceMutation.isPending}
+                variant={streamSettings?.isAttendanceActive ? 'destructive' : 'default'}
+              >
+                {toggleAttendanceMutation.isPending 
+                  ? 'Updating...' 
+                  : streamSettings?.isAttendanceActive 
+                    ? 'Stop Attendance' 
+                    : 'Start Attendance'}
+              </Button>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="youtube-url">YouTube URL (any format)</Label>
               <Input
