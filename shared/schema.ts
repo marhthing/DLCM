@@ -22,13 +22,6 @@ export const streamSettings = pgTable("stream_settings", {
   updatedAt: text("updated_at").notNull(),
 });
 
-export type StreamSettings = {
-  id: string;
-  youtubeUrl: string;
-  isAttendanceActive: boolean;
-  updatedAt: string;
-};
-
 export const insertAttendanceRecordSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
