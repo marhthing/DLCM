@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, Radio, Video, VideoOff } from 'lucide-react'
+import { Clock, Users, Timer, User, Play, Pause, Volume2, VolumeX, Maximize, Radio, Video, VideoOff, PictureInPicture2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -250,6 +250,43 @@ export default function StreamPage() {
         // Don't show loading state for jump to live - it's faster
         setShowJumpToLive(false)
       }
+    }
+  }
+
+  // Picture-in-Picture - allows video to float while app is minimized
+  const handlePictureInPicture = async () => {
+    try {
+      // Check if Document Picture-in-Picture is supported (Chrome 116+)
+      if ('documentPictureInPicture' in window) {
+        const pipWindow = await (window as any).documentPictureInPicture.requestWindow({
+          width: 400,
+          height: 225,
+        })
+        
+        // Copy styles to the PiP window
+        const style = document.createElement('style')
+        style.textContent = `
+          body { margin: 0; background: #000; overflow: hidden; }
+          iframe { width: 100%; height: 100%; border: none; }
+        `
+        pipWindow.document.head.appendChild(style)
+        
+        // Clone the iframe to the PiP window
+        if (iframeRef.current) {
+          const pipIframe = document.createElement('iframe')
+          pipIframe.src = iframeRef.current.src
+          pipIframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
+          pipIframe.style.width = '100%'
+          pipIframe.style.height = '100%'
+          pipWindow.document.body.appendChild(pipIframe)
+        }
+      } else {
+        // Fallback: Show instructions for manual PiP
+        alert('To enable Picture-in-Picture:\n\n1. Right-click on the video twice\n2. Select "Picture in Picture"\n\nThis allows audio to continue when you minimize the app.')
+      }
+    } catch (error) {
+      console.error('PiP error:', error)
+      alert('To enable Picture-in-Picture:\n\n1. Right-click on the video twice\n2. Select "Picture in Picture"\n\nThis allows audio to continue when you minimize the app.')
     }
   }
 
@@ -655,6 +692,18 @@ export default function StreamPage() {
             >
               <Maximize className="h-4 w-4 mr-1" />
               Fullscreen
+            </Button>
+
+            {/* Picture-in-Picture */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePictureInPicture}
+              className="bg-gray-700/50 border-gray-600 text-white"
+              data-testid="button-pip"
+            >
+              <PictureInPicture2 className="h-4 w-4 mr-1" />
+              Mini Player
             </Button>
           </div>
         </div>
