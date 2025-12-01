@@ -20,8 +20,10 @@ export default function StreamPage() {
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const activeViewersIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const attendanceStatusIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const streamSessionIdRef = useRef('')
   const currentStartTimeRef = useRef(0)
+  const [isAttendanceActive, setIsAttendanceActive] = useState(false)
 
   // YouTube Player control state
   const iframeRef = useRef<HTMLIFrameElement>(null)
@@ -94,6 +96,7 @@ export default function StreamPage() {
       })
       .then(data => {
         setStreamSettings(data)
+        setIsAttendanceActive(data.isAttendanceActive === 'true')
         if (data.youtubeUrl) {
           const videoId = extractVideoId(data.youtubeUrl)
           if (videoId) {
@@ -104,6 +107,26 @@ export default function StreamPage() {
       .catch(err => {
         console.error('Error fetching stream settings:', err)
       })
+
+    // Poll for attendance status changes every 10 seconds
+    const pollAttendanceStatus = () => {
+      fetch('/api/stream/settings')
+        .then(res => res.json())
+        .then(data => {
+          const newStatus = data.isAttendanceActive === 'true'
+          setIsAttendanceActive(newStatus)
+          setStreamSettings((prev: any) => ({ ...prev, isAttendanceActive: data.isAttendanceActive }))
+        })
+        .catch(console.error)
+    }
+    
+    attendanceStatusIntervalRef.current = setInterval(pollAttendanceStatus, 10000)
+
+    return () => {
+      if (attendanceStatusIntervalRef.current) {
+        clearInterval(attendanceStatusIntervalRef.current)
+      }
+    }
   }, [router])
 
   const extractVideoId = (url: string): string | null => {
@@ -246,14 +269,25 @@ export default function StreamPage() {
     if (streamTitle === 'Live Service') return
 
     // Don't track attendance if admin has disabled it
-    if (streamSettings.isAttendanceActive !== 'true') {
+    if (!isAttendanceActive) {
       console.log('Attendance tracking is disabled by admin')
+      // Stop heartbeat if it was running
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current)
+        heartbeatIntervalRef.current = null
+      }
       return
     }
 
     // Don't track attendance if stream is not live
     if (liveStatusChecked && !isLiveStream) {
       console.log('Stream is not live, skipping attendance tracking')
+      return
+    }
+
+    // Don't start another heartbeat if one is already running
+    if (heartbeatIntervalRef.current) {
+      console.log('Heartbeat already running')
       return
     }
 
@@ -350,7 +384,7 @@ export default function StreamPage() {
     }
 
     initializeSession()
-  }, [streamSettings, user, streamTitle, isLiveStream, liveStatusChecked])
+  }, [streamSettings, user, streamTitle, isLiveStream, liveStatusChecked, isAttendanceActive])
 
   // Cleanup effect for session intervals
   useEffect(() => {
@@ -484,6 +518,10 @@ export default function StreamPage() {
               <div className="flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 rounded-md">
                 <Timer className="h-3 w-3" />
                 <span>{formatDuration(elapsedSeconds)}</span>
+                <span 
+                  className={`h-2 w-2 rounded-full ${isAttendanceActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}
+                  title={isAttendanceActive ? 'Attendance tracking active' : 'Attendance tracking inactive'}
+                />
               </div>
               <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-md">
                 <Users className="h-3 w-3" />
