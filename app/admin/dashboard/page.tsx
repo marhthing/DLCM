@@ -598,26 +598,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-900">
-          <CardHeader>
-            <CardTitle className="text-blue-900 dark:text-blue-100" data-testid="text-setup-title">
-              Setup Instructions
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-2" data-testid="list-setup-instructions">
-              <li data-testid="instruction-password">
-                • Default admin password: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-sm">admin123</code>
-              </li>
-              <li data-testid="instruction-stream-url">
-                • For permanent live stream, use: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-sm">CHANNEL_ID/live</code>
-              </li>
-              <li data-testid="instruction-tracking">• Attendance is recorded when users close the tab or leave</li>
-              <li data-testid="instruction-export">• Export data to PDF for record keeping and printing</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
+        </div>
     </div>
   )
 }
