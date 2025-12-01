@@ -27,7 +27,7 @@ export default function StreamPage() {
 
   // YouTube Player control state
   const iframeRef = useRef<HTMLIFrameElement>(null)
-  const [isPlaying, setIsPlaying] = useState(true)
+  const [isPlaying, setIsPlaying] = useState(false) // Default to false until video confirms playing
   const [isMuted, setIsMuted] = useState(false)
   const [origin, setOrigin] = useState('')
   const [showJumpToLive, setShowJumpToLive] = useState(false)
@@ -63,12 +63,15 @@ export default function StreamPage() {
 
           // YouTube player states:
           // -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (video cued)
-          if (playerState === 1) {
+          if (playerState === 1 || playerState === 3) {
+            // Playing or buffering = treat as playing
             setIsPlaying(true)
-            // Don't hide Jump to Live button here - only hide it when user explicitly jumps
-          } else if (playerState === 2) {
+          } else {
+            // All other states (unstarted, ended, paused, cued) = not playing
             setIsPlaying(false)
-            setShowJumpToLive(true)
+            if (playerState === 2) {
+              setShowJumpToLive(true)
+            }
           }
         }
       } catch (e) {
