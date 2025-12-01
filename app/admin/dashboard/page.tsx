@@ -381,18 +381,18 @@ export default function AdminDashboard() {
               <div>
                 <h3 className="font-semibold">Attendance Tracking</h3>
                 <p className="text-sm text-muted-foreground">
-                  {streamSettings?.isAttendanceActive ? 'Currently tracking attendance' : 'Attendance tracking disabled'}
+                  {streamSettings?.isAttendanceActive === 'true' ? 'Currently tracking attendance' : 'Attendance tracking disabled'}
                 </p>
               </div>
               <Button
                 data-testid="button-toggle-attendance"
-                onClick={() => toggleAttendanceMutation.mutate(!streamSettings?.isAttendanceActive)}
+                onClick={() => toggleAttendanceMutation.mutate(streamSettings?.isAttendanceActive !== 'true')}
                 disabled={toggleAttendanceMutation.isPending}
-                variant={streamSettings?.isAttendanceActive ? 'destructive' : 'default'}
+                variant={streamSettings?.isAttendanceActive === 'true' ? 'destructive' : 'default'}
               >
                 {toggleAttendanceMutation.isPending 
                   ? 'Updating...' 
-                  : streamSettings?.isAttendanceActive 
+                  : streamSettings?.isAttendanceActive === 'true' 
                     ? 'Stop Attendance' 
                     : 'Start Attendance'}
               </Button>

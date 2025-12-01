@@ -246,7 +246,7 @@ export default function StreamPage() {
     if (streamTitle === 'Live Service') return
 
     // Don't track attendance if admin has disabled it
-    if (!streamSettings.isAttendanceActive) {
+    if (streamSettings.isAttendanceActive !== 'true') {
       console.log('Attendance tracking is disabled by admin')
       return
     }
