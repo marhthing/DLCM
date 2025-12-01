@@ -18,6 +18,7 @@ export const attendanceRecords = pgTable("attendance_records", {
 export const streamSettings = pgTable("stream_settings", {
   id: varchar("id").primaryKey(),
   youtubeUrl: text("youtube_url").notNull(),
+  isAttendanceActive: text("is_attendance_active").notNull().default("false"),
   updatedAt: text("updated_at").notNull(),
 });
 
