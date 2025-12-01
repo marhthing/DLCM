@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { SupabaseStorage } from '@/lib/supabase-storage'
-import { trackActiveViewer } from '@/lib/active-viewers'
 
 const storage = new SupabaseStorage()
 
@@ -9,9 +8,7 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { email, streamSessionId, name, streamTitle, startTime, durationSeconds } = body
 
-    // Update active viewers tracking
-    trackActiveViewer(email, Date.now())
-
+    // Upsert attendance record - this updates last_seen_at in the database
     const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
       name,
       streamTitle,

@@ -256,4 +256,20 @@ export class SupabaseStorage {
       updatedAt: data.updated_at,
     };
   }
+
+  async getActiveViewersCount(timeoutMs: number = 120000): Promise<number> {
+    const cutoffTime = new Date(Date.now() - timeoutMs).toISOString();
+    
+    const { count, error } = await supabase
+      .from('attendance_records')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_seen_at', cutoffTime);
+
+    if (error) {
+      console.error('Error getting active viewers count:', error);
+      return 0;
+    }
+
+    return count || 0;
+  }
 }
