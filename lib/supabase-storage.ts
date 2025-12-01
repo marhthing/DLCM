@@ -187,7 +187,7 @@ export class SupabaseStorage {
     return {
       id: data.id,
       youtubeUrl: data.youtube_url,
-      isAttendanceActive: data.is_attendance_active === 'true',
+      isAttendanceActive: data.is_attendance_active || 'false',
       updatedAt: data.updated_at,
     };
   }
@@ -217,7 +217,7 @@ export class SupabaseStorage {
     return {
       id: data.id,
       youtubeUrl: data.youtube_url,
-      isAttendanceActive: data.is_attendance_active === 'true',
+      isAttendanceActive: data.is_attendance_active || 'false',
       updatedAt: data.updated_at,
     };
   }
@@ -252,6 +252,7 @@ export class SupabaseStorage {
     return {
       id: data.id,
       youtubeUrl: data.youtube_url,
+      isAttendanceActive: data.is_attendance_active || 'false',
       updatedAt: data.updated_at,
     };
   }
