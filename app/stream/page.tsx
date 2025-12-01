@@ -643,13 +643,13 @@ export default function StreamPage() {
               </Button>
             )}
 
-            {/* Jump to Live - Always show for live streams */}
-            {isLiveStream && (
+            {/* Jump to Live - Only show when user has paused or might be behind */}
+            {isLiveStream && showJumpToLive && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleGoLive}
-                className={`border-red-500 text-white ${showJumpToLive ? 'bg-red-600/80 animate-pulse ring-2 ring-red-400' : 'bg-red-600/50'}`}
+                className="bg-red-600/80 border-red-500 text-white animate-pulse ring-2 ring-red-400"
                 data-testid="button-go-live"
               >
                 <Radio className="h-4 w-4 mr-1" />
