@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { Providers } from './providers'
+import Footer from '@/components/footer'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -28,7 +29,12 @@ export default function RootLayout({
         <link rel="icon" type="image/png" href="https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png" />
       </head>
       <body className={inter.className} suppressHydrationWarning>
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="pb-16">
+            {children}
+          </div>
+          <Footer />
+        </Providers>
       </body>
     </html>
   )
