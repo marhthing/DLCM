@@ -33,10 +33,9 @@ export default function AdminDashboard() {
   const [newYoutubeUrl, setNewYoutubeUrl] = useState('')
   const { toast } = useToast()
 
-  // Filtering state - date starts empty, defaults to today only when no service filter
+  // Filtering state
   const [filterDate, setFilterDate] = useState('')
   const [filterTitle, setFilterTitle] = useState('')
-  const today = format(new Date(), 'yyyy-MM-dd')
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
@@ -62,14 +61,9 @@ export default function AdminDashboard() {
   const uniqueTitles = Array.from(new Set(attendanceRecords.map(record => record.streamTitle))).sort()
 
   // Filtered records based on state
-  // If no service filter is selected and no date filter is set, default to today
-  // If service filter is selected, show all records for that service (unless date is manually set)
   const filteredRecords = attendanceRecords.filter(record => {
     const recordDate = format(new Date(record.startTime), 'yyyy-MM-dd')
-    
-    // Determine effective date: use filterDate if set, otherwise use today only if no service filter
-    const effectiveDate = filterDate || (!filterTitle ? today : '')
-    const dateMatch = effectiveDate ? recordDate === effectiveDate : true
+    const dateMatch = filterDate ? recordDate === filterDate : true
     const titleMatch = filterTitle ? record.streamTitle === filterTitle : true
     return dateMatch && titleMatch
   })
@@ -507,12 +501,8 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 <div className="mb-2 text-sm text-muted-foreground">
-                  Showing {startIndex + 1}-{Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} records
-                  {!filterTitle && !filterDate && ' (today only)'}
-                  {filterTitle && !filterDate && ` for "${filterTitle}" (all dates)`}
-                  {filterDate && filterTitle && ` for "${filterTitle}" on ${filterDate}`}
-                  {filterDate && !filterTitle && ` for ${filterDate}`}
-                  {' '}({attendanceRecords.length} total)
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} {filterDate || filterTitle ? 'filtered' : ''} records
+                  {(filterDate || filterTitle) && ` (${attendanceRecords.length} total)`}
                 </div>
                 <div className="border rounded-lg overflow-auto">
                   <Table>
