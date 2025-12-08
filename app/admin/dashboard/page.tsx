@@ -33,8 +33,8 @@ export default function AdminDashboard() {
   const [newYoutubeUrl, setNewYoutubeUrl] = useState('')
   const { toast } = useToast()
 
-  // Filtering state
-  const [filterDate, setFilterDate] = useState('')
+  // Filtering state - default to today's date
+  const [filterDate, setFilterDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
   const [filterTitle, setFilterTitle] = useState('')
 
   // Pagination state
