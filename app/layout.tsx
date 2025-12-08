@@ -9,12 +9,12 @@ import ServiceWorkerRegister from '@/components/service-worker-register'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Deeper Life Bible Church - Pontypridd Region',
-  description: 'Watch live services from Deeper Life Bible Church, Pontypridd Region and track your attendance online.',
+  title: 'Deeper Life Bible Church - Pontypridd Branch',
+  description: 'Watch live services from Deeper Life Bible Church, Pontypridd Branch and track your attendance online.',
   manifest: '/manifest.json',
   openGraph: {
-    title: 'Deeper Life Bible Church - Pontypridd Region',
-    description: 'Watch live services from Deeper Life Bible Church, Pontypridd Region and track your attendance online.',
+    title: 'Deeper Life Bible Church - Pontypridd Branch',
+    description: 'Watch live services from Deeper Life Bible Church, Pontypridd Branch and track your attendance online.',
     type: 'website',
     images: ['https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png'],
   },

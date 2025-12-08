@@ -183,7 +183,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text('Pontypridd Region', 50, 26)
+      doc.text('Pontypridd Branch', 50, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          'Deeper Life Bible Church - Pontypridd Region',
+          'Deeper Life Bible Church - Pontypridd Branch',
           14,
           doc.internal.pageSize.height - 10
         )
@@ -278,7 +278,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text('Pontypridd Region', 14, 26)
+      doc.text('Pontypridd Branch', 14, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -335,7 +335,7 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          'Deeper Life Bible Church - Pontypridd Region',
+          'Deeper Life Bible Church - Pontypridd Branch',
           14,
           doc.internal.pageSize.height - 10
         )
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - Pontypridd Region</p>
+            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - Pontypridd Branch</p>
           </div>
           <Button
             data-testid="button-logout"

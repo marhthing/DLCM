@@ -56,7 +56,7 @@ export default function AdminLogin() {
           <div>
             <CardTitle className="text-3xl font-bold mb-2">Admin Access</CardTitle>
             <CardDescription className="text-base font-medium">
-              Deeper Life Bible Church - Pontypridd Region
+              Deeper Life Bible Church - Pontypridd Branch
             </CardDescription>
             <CardDescription className="text-sm mt-2">
               Enter your credentials to access the admin dashboard
