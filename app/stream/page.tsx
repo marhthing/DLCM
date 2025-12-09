@@ -505,7 +505,7 @@ export default function StreamPage() {
   if (!user || !streamSettings) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+    <div className="h-screen overflow-y-auto bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
       {/* Compact Header */}
       <div className="bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 py-2">
