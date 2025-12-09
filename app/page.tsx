@@ -2,21 +2,23 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import InstallPrompt from '@/components/install-prompt'
+import { BRANCHES } from '@/shared/schema'
 
 export default function LoginPage() {
   const router = useRouter()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [branch, setBranch] = useState('')
 
   const handleJoinStream = () => {
-    if (name && email) {
-      localStorage.setItem('churchUser', JSON.stringify({ name, email, startTime: Date.now() }))
+    if (name && email && branch) {
+      localStorage.setItem('churchUser', JSON.stringify({ name, email, branch, startTime: Date.now() }))
       router.push('/stream')
     }
   }
@@ -35,7 +37,7 @@ export default function LoginPage() {
             </div>
             <div>
               <CardTitle className="text-3xl font-bold mb-2">Deeper Life Bible Church</CardTitle>
-              <CardDescription className="text-base font-medium">Pontypridd Branch - Streaming Platform</CardDescription>
+              <CardDescription className="text-base font-medium">Streaming Platform</CardDescription>
               <CardDescription className="text-sm mt-2">
                 Sign in to watch and record your attendance
               </CardDescription>
@@ -44,9 +46,25 @@ export default function LoginPage() {
           <CardContent className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="branch">Select Your Branch</Label>
+                <Select value={branch} onValueChange={setBranch}>
+                  <SelectTrigger id="branch" data-testid="select-branch">
+                    <SelectValue placeholder="Choose your branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BRANCHES.map((b) => (
+                      <SelectItem key={b} value={b} data-testid={`option-branch-${b}`}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
                   id="name"
+                  data-testid="input-name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -58,6 +76,7 @@ export default function LoginPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
+                  data-testid="input-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -65,12 +84,17 @@ export default function LoginPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleJoinStream()}
                 />
               </div>
-              <Button onClick={handleJoinStream} className="w-full" disabled={!name || !email}>
+              <Button 
+                data-testid="button-join-stream"
+                onClick={handleJoinStream} 
+                className="w-full" 
+                disabled={!name || !email || !branch}
+              >
                 Join Live Stream
               </Button>
             </div>
             <div className="text-center">
-              <Button variant="ghost" onClick={() => router.push('/admin/login')} className="text-sm">
+              <Button variant="ghost" onClick={() => router.push('/admin/login')} className="text-sm" data-testid="button-admin-access">
                 Admin Access
               </Button>
             </div>

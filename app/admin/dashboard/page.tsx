@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const router = useRouter()
   const [newYoutubeUrl, setNewYoutubeUrl] = useState('')
   const { toast } = useToast()
+  const [adminBranch, setAdminBranch] = useState('')
 
   // Filtering state
   const [filterDate, setFilterDate] = useState('')
@@ -43,13 +44,23 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const isAdmin = localStorage.getItem('adminAuth')
-    if (!isAdmin) {
+    const branch = localStorage.getItem('adminBranch')
+    if (!isAdmin || !branch) {
       router.push('/admin/login')
+      return
     }
+    setAdminBranch(branch)
   }, [router])
 
   const { data: attendanceRecords = [], isLoading: isLoadingRecords, isError, error } = useQuery<AttendanceRecord[]>({
-    queryKey: ['/api/attendance/records'],
+    queryKey: ['/api/attendance/records', adminBranch],
+    queryFn: async () => {
+      if (!adminBranch) return []
+      const res = await fetch(`/api/attendance/records?branch=${encodeURIComponent(adminBranch)}`)
+      if (!res.ok) throw new Error('Failed to fetch records')
+      return res.json()
+    },
+    enabled: !!adminBranch,
     refetchInterval: 30000, // Refetch every 30 seconds
   })
 
@@ -154,6 +165,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('adminAuth')
+    localStorage.removeItem('adminBranch')
     router.push('/')
   }
 
@@ -183,7 +195,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text('Pontypridd Branch', 50, 26)
+      doc.text(`${adminBranch} Branch`, 50, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -251,14 +263,14 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          'Deeper Life Bible Church - Pontypridd Branch',
+          `Deeper Life Bible Church - ${adminBranch} Branch`,
           14,
           doc.internal.pageSize.height - 10
         )
       }
 
       // Save the PDF
-      doc.save(`DLBC-Pontypridd-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      doc.save(`DLBC-${adminBranch}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
 
       toast({
         title: 'Export successful',
@@ -278,7 +290,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text('Pontypridd Branch', 14, 26)
+      doc.text(`${adminBranch} Branch`, 14, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -335,13 +347,13 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          'Deeper Life Bible Church - Pontypridd Branch',
+          `Deeper Life Bible Church - ${adminBranch} Branch`,
           14,
           doc.internal.pageSize.height - 10
         )
       }
 
-      doc.save(`DLBC-Pontypridd-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      doc.save(`DLBC-${adminBranch}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
 
       toast({
         title: 'Export successful',
@@ -356,7 +368,7 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
           <div>
             <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - Pontypridd Branch</p>
+            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - {adminBranch} Branch</p>
           </div>
           <Button
             data-testid="button-logout"

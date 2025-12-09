@@ -6,6 +6,7 @@ export const attendanceRecords = pgTable("attendance_records", {
   id: varchar("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  branch: text("branch").notNull().default("Pontypridd"),
   streamSessionId: text("stream_session_id").notNull(),
   streamTitle: text("stream_title").notNull(),
   startTime: text("start_time").notNull(),
@@ -25,6 +26,7 @@ export const streamSettings = pgTable("stream_settings", {
 export const insertAttendanceRecordSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  branch: z.string().min(1),
   streamSessionId: z.string().min(1),
   streamTitle: z.string().min(1),
   startTime: z.string(),
@@ -35,6 +37,7 @@ export const insertAttendanceRecordSchema = z.object({
 export const heartbeatAttendanceSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  branch: z.string().min(1),
   streamSessionId: z.string().min(1),
   streamTitle: z.string().min(1),
   startTime: z.string(),
@@ -55,12 +58,25 @@ export type InsertStreamSettings = z.infer<typeof insertStreamSettingsSchema>;
 export const viewerSessionSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Valid email is required"),
+  branch: z.string().min(1, "Branch is required"),
 });
+
+// Available branches
+export const BRANCHES = [
+  "Pontypridd",
+  "Cardiff",
+  "Swansea", 
+  "Newport",
+  "Bristol"
+] as const;
+
+export type Branch = typeof BRANCHES[number];
 
 export type ViewerSession = z.infer<typeof viewerSessionSchema>;
 
 // Admin login schema
 export const adminLoginSchema = z.object({
+  branch: z.string().min(1, "Branch is required"),
   password: z.string().min(1, "Password is required"),
 });
 

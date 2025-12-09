@@ -10,7 +10,7 @@ import { checkIfLive, monitorLiveStatus } from '@/lib/youtube-api'
 
 export default function StreamPage() {
   const router = useRouter()
-  const [user, setUser] = useState<{ name: string; email: string; startTime: number; lastStreamSessionId?: string } | null>(null)
+  const [user, setUser] = useState<{ name: string; email: string; branch: string; startTime: number; lastStreamSessionId?: string } | null>(null)
   const [streamSettings, setStreamSettings] = useState<any>(null)
   const [isStreamLive, setIsStreamLive] = useState(true)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -372,9 +372,10 @@ export default function StreamPage() {
 
         sendHeartbeat()
 
-        // Start active viewers polling
+        // Start active viewers polling (filtered by branch)
         const fetchActiveViewers = () => {
-          fetch('/api/attendance/active-count')
+          const branchParam = user?.branch ? `?branch=${encodeURIComponent(user.branch)}` : ''
+          fetch(`/api/attendance/active-count${branchParam}`)
             .then(res => res.json())
             .then(data => setActiveViewersCount(data.count || 0))
             .catch(console.error)
@@ -439,6 +440,7 @@ export default function StreamPage() {
         body: JSON.stringify({
           name: user.name,
           email: user.email,
+          branch: user.branch,
           streamSessionId: streamSessionIdRef.current,
           streamTitle: streamTitle,
           startTime: new Date(currentStartTimeRef.current).toISOString(),
@@ -458,6 +460,7 @@ export default function StreamPage() {
     const payload = JSON.stringify({
       name: user.name,
       email: user.email,
+      branch: user.branch,
       streamSessionId: streamSessionIdRef.current,
       streamTitle: streamTitle,
       startTime: new Date(currentStartTimeRef.current).toISOString(),

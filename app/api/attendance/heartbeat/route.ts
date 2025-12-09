@@ -6,11 +6,12 @@ const storage = new SupabaseStorage()
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, streamSessionId, name, streamTitle, startTime, durationSeconds } = body
+    const { email, streamSessionId, name, branch, streamTitle, startTime, durationSeconds } = body
 
     // Upsert attendance record - this updates last_seen_at in the database
     const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
       name,
+      branch: branch || 'Pontypridd',
       streamTitle,
       startTime,
       durationSeconds,
