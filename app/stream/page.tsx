@@ -86,11 +86,29 @@ export default function StreamPage() {
   useEffect(() => {
     const storedUser = localStorage.getItem('churchUser')
     if (!storedUser) {
-      router.push('/')
+      // No user data found, redirect to login
+      router.replace('/')
       return
     }
-    const parsedUser = JSON.parse(storedUser)
-    setUser(parsedUser)
+    
+    try {
+      const parsedUser = JSON.parse(storedUser)
+      
+      // Validate that user has required fields
+      if (!parsedUser.name || !parsedUser.email || !parsedUser.branch) {
+        // Invalid user data, redirect to login
+        localStorage.removeItem('churchUser')
+        router.replace('/')
+        return
+      }
+      
+      setUser(parsedUser)
+    } catch (error) {
+      // Invalid JSON, redirect to login
+      localStorage.removeItem('churchUser')
+      router.replace('/')
+      return
+    }
 
     fetch('/api/stream/settings')
       .then(res => {
@@ -502,7 +520,17 @@ export default function StreamPage() {
     return `${minutes}m ${secs}s`
   }
 
-  if (!user || !streamSettings) return null
+  // Show loading state while checking authentication
+  if (!user || !streamSettings) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-r-transparent"></div>
+          <p className="mt-2 text-sm text-white">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
