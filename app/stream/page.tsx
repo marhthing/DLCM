@@ -710,11 +710,15 @@ export default function StreamPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-xs text-gray-400">
-                      {isLiveStream ? 'LIVE Now' : 'Recorded'}
-                    </p>
-                    {isLiveStream && (
-                      <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">LIVE</span>
+                    {isLiveStream ? (
+                      <>
+                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">LIVE</span>
+                        <p className="text-xs text-gray-400">
+                          Started {user?.startTime ? format(new Date(currentStartTimeRef.current || user.startTime), 'h:mm a') : ''}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-400">Recorded Stream</p>
                     )}
                   </div>
                   <p className="text-sm font-semibold text-white line-clamp-2">{streamTitle}</p>
