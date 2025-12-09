@@ -41,9 +41,7 @@ export default function RootLayout({
       <body className={inter.className} suppressHydrationWarning>
         <ServiceWorkerRegister />
         <Providers>
-          <div className="pb-16">
-            {children}
-          </div>
+          {children}
           <Footer />
         </Providers>
       </body>
