@@ -679,57 +679,21 @@ export default function StreamPage() {
           <h2 className="text-lg sm:text-xl font-semibold text-white" data-testid="text-stream-title">{streamTitle}</h2>
         </div>
 
-        {/* Info Cards - Responsive Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-          {/* User Info */}
-          <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
-            <CardContent className="p-3">
-              <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
-                  <User className="h-5 w-5 text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-gray-400 mb-0.5">Viewing as</p>
-                  <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                  <p className="text-xs text-gray-400 truncate">{user.email}</p>
-                </div>
+        {/* User Info */}
+        <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
+          <CardContent className="p-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center flex-shrink-0">
+                <User className="h-5 w-5 text-white" />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Stream Info */}
-          <Card className="bg-gray-800/50 backdrop-blur-sm border-gray-700/50">
-            <CardContent className="p-3">
-              <div className="flex items-start gap-3">
-                <div className={`h-10 w-10 rounded-full ${isLiveStream ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-gray-500 to-gray-600'} flex items-center justify-center flex-shrink-0`}>
-                  {isLiveStream ? (
-                    <div className="h-2 w-2 bg-white rounded-full animate-pulse"></div>
-                  ) : (
-                    <VideoOff className="h-4 w-4 text-white" />
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    {isLiveStream ? (
-                      <>
-                        <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded">LIVE</span>
-                        <p className="text-xs text-gray-400">
-                          Started {user?.startTime ? format(new Date(currentStartTimeRef.current || user.startTime), 'h:mm a') : ''}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-xs text-gray-400">Recorded Stream</p>
-                    )}
-                  </div>
-                  <p className="text-sm font-semibold text-white line-clamp-2">{streamTitle}</p>
-                  {!isLiveStream && liveStatusChecked && (
-                    <p className="text-[10px] text-gray-500 mt-0.5">Attendance tracking disabled</p>
-                  )}
-                </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-gray-400 mb-0.5">Viewing as</p>
+                <p className="text-sm font-semibold text-white truncate">{user.name}</p>
+                <p className="text-xs text-gray-400 truncate">{user.email}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
