@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
+  branch TEXT NOT NULL DEFAULT 'Pontypridd',
   stream_session_id TEXT NOT NULL,
   stream_title TEXT DEFAULT 'Live Service',
   start_time TIMESTAMPTZ NOT NULL,
@@ -11,12 +12,13 @@ CREATE TABLE IF NOT EXISTS attendance_records (
   last_seen_at TIMESTAMPTZ NOT NULL,
   duration_seconds INTEGER DEFAULT 0,
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE(email, stream_session_id)
+  UNIQUE(email, stream_session_id, branch)
 );
 
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_attendance_email_session ON attendance_records(email, stream_session_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_records(timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_attendance_branch ON attendance_records(branch);
 
 -- Create stream_settings table
 CREATE TABLE IF NOT EXISTS stream_settings (
@@ -36,3 +38,10 @@ CREATE POLICY "Allow all operations on attendance_records" ON attendance_records
 
 CREATE POLICY "Allow all operations on stream_settings" ON stream_settings
   FOR ALL USING (true) WITH CHECK (true);
+
+-- Migration: Add branch column to existing tables (if upgrading)
+ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pontypridd';
+
+-- Migration: Update unique constraint to include branch
+ALTER TABLE attendance_records DROP CONSTRAINT IF EXISTS attendance_records_email_stream_session_id_key;
+ALTER TABLE attendance_records ADD CONSTRAINT attendance_records_email_session_branch_key UNIQUE(email, stream_session_id, branch);
