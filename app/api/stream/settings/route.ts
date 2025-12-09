@@ -7,7 +7,17 @@ export async function GET() {
   try {
     const settings = await storage.getStreamSettings()
     if (!settings) {
-      return NextResponse.json({ message: 'Stream settings not found' }, { status: 404 })
+      // Return default settings instead of 404
+      return NextResponse.json({
+        id: '',
+        youtubeUrl: '',
+        isAttendanceActive: 'false',
+        updatedAt: new Date().toISOString(),
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
     }
     return NextResponse.json(settings, {
       headers: {

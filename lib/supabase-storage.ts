@@ -180,6 +180,36 @@ export class SupabaseStorage {
       .select('*')
       .single();
 
+    // If no settings exist, create a default one
+    if (error && error.code === 'PGRST116') {
+      console.log('No stream settings found, creating default...');
+      const id = randomUUID();
+      const now = new Date().toISOString();
+      
+      const { data: newData, error: insertError } = await supabase
+        .from('stream_settings')
+        .insert({
+          id,
+          youtube_url: '',
+          is_attendance_active: 'false',
+          updated_at: now,
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error('Error creating default stream settings:', insertError);
+        return undefined;
+      }
+
+      return {
+        id: newData.id,
+        youtubeUrl: newData.youtube_url,
+        isAttendanceActive: newData.is_attendance_active || 'false',
+        updatedAt: newData.updated_at,
+      };
+    }
+
     if (error) {
       console.error('Error fetching stream settings:', error);
       return undefined;
