@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     // Upsert attendance record - this updates last_seen_at in the database
     const record = await storage.upsertAttendanceRecord(email, streamSessionId, {
       name,
-      branch: branch || 'Pontypridd',
+      branch: branch || 'Unknown',
       streamTitle,
       startTime,
       durationSeconds,

@@ -1,8 +1,7 @@
-
 {
-  "name": "Deeper Life Bible Church - Pontypridd Branch",
-  "short_name": "DLBC Pontypridd",
-  "description": "Watch live services from Deeper Life Bible Church, Pontypridd Branch and track your attendance online.",
+  "name": "Deeper Life Bible Church - Streaming Platform",
+  "short_name": "DLBC Streaming",
+  "description": "Watch live services from Deeper Life Bible Church and track your attendance online.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

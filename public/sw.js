@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'dlbc-pontypridd-v3';
+const CACHE_NAME = 'dlbc-streaming-v4';
 const urlsToCache = [
   '/',
   '/stream',

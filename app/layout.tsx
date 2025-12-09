@@ -9,12 +9,12 @@ import ServiceWorkerRegister from '@/components/service-worker-register'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Deeper Life Bible Church - Pontypridd Branch',
-  description: 'Watch live services from Deeper Life Bible Church, Pontypridd Branch and track your attendance online.',
+  title: 'Deeper Life Bible Church - Streaming Platform',
+  description: 'Watch live services from Deeper Life Bible Church and track your attendance online.',
   manifest: '/manifest.json',
   openGraph: {
-    title: 'Deeper Life Bible Church - Pontypridd Branch',
-    description: 'Watch live services from Deeper Life Bible Church, Pontypridd Branch and track your attendance online.',
+    title: 'Deeper Life Bible Church - Streaming Platform',
+    description: 'Watch live services from Deeper Life Bible Church and track your attendance online.',
     type: 'website',
     images: ['https://deeperlifeclapham.org/wp-content/uploads/2024/02/Deeper-life-logo-final-outlines-.png'],
   },
@@ -33,7 +33,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="DLBC Pontypridd" />
+        <meta name="apple-mobile-web-app-title" content="DLBC Streaming" />
         <meta name="theme-color" content="#3b82f6" />
         <link rel="apple-touch-icon" href="/church-logo.jpg" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
