@@ -11,12 +11,18 @@ A Next.js web application that allows church members to watch live-streamed serv
 ## Current State
 Production-ready for Vercel deployment. Successfully migrated from Express to Next.js App Router.
 
-## Recent Changes (November 24, 2025)
-- **LATEST**: Migrated from Express backend to Next.js App Router for Vercel deployment
-- **LATEST**: Converted all Express API routes to Next.js route handlers
-- **LATEST**: Added React Query provider for state management across admin pages
-- **LATEST**: Implemented shared active viewer tracking using lib/active-viewers.ts
-- **LATEST**: Secured admin password using ADMIN_PASSWORD environment variable
+## Recent Changes (December 10, 2025)
+- **LATEST**: Separated Stream Settings from Attendance functionality
+- **LATEST**: Created new Attendance Record section for branch-specific attendance management
+- **LATEST**: Admin section now shows Stream Settings + combined attendance from all branches with branch filter
+- **LATEST**: Login page now has two buttons: "Attendance Record" and "Admin"
+
+## Previous Changes (November 24, 2025)
+- Migrated from Express backend to Next.js App Router for Vercel deployment
+- Converted all Express API routes to Next.js route handlers
+- Added React Query provider for state management across admin pages
+- Implemented shared active viewer tracking using lib/active-viewers.ts
+- Secured admin password using ADMIN_PASSWORD environment variable
 - Migrated from in-memory/Supabase to Google Sheets storage with race-condition-safe initialization
 - Implemented heartbeat-based attendance system (30-second intervals) to prevent auto-refresh issues
 - Added session-based tracking with streamSessionId (videoId + date) for preventing duplicate records
@@ -33,10 +39,12 @@ Production-ready for Vercel deployment. Successfully migrated from Express to Ne
 ## Project Architecture
 
 ### Frontend (Next.js App Router)
-- **Login Page** (`app/page.tsx`) - Users enter name and email to join stream
+- **Login Page** (`app/page.tsx`) - Users enter name, email, and branch to join stream; has two staff access buttons
 - **Stream Page** (`app/stream/page.tsx`) - YouTube embed with attendance tracking
-- **Admin Login** (`app/admin/login/page.tsx`) - Password-protected admin access
-- **Admin Dashboard** (`app/admin/dashboard/page.tsx`) - Stream management and attendance records
+- **Attendance Login** (`app/attendance/login/page.tsx`) - Branch-specific access for attendance management
+- **Attendance Dashboard** (`app/attendance/dashboard/page.tsx`) - Branch-specific start/stop attendance and view records
+- **Admin Login** (`app/admin/login/page.tsx`) - Password-protected admin access (no branch required)
+- **Admin Dashboard** (`app/admin/dashboard/page.tsx`) - Stream Settings, start/stop attendance, and combined attendance records from all branches with branch filter
 
 ### Backend (Next.js API Routes)
 - **GET `/api/stream/settings`** - Fetch current YouTube URL
