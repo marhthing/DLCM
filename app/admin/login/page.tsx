@@ -58,9 +58,6 @@ export default function AdminLogin() {
             <CardDescription className="text-base font-medium">
               Deeper Life Bible Church
             </CardDescription>
-            <CardDescription className="text-sm mt-2">
-              Enter the admin password to access stream settings and all attendance records
-            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
