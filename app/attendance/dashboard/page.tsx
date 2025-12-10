@@ -2,18 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Youtube, Users, Download } from 'lucide-react'
+import { Users, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { apiRequest, queryClient } from '@/lib/queryClient'
+import { apiRequest } from '@/lib/queryClient'
 import type { AttendanceRecord, StreamSettings } from '@/shared/schema'
-import { BRANCHES } from '@/shared/schema'
 import { format } from 'date-fns'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -29,33 +27,36 @@ const formatDuration = (durationSeconds: number): string => {
   return `${minutes}m ${seconds}s`
 }
 
-export default function AdminDashboard() {
+export default function AttendanceDashboard() {
   const router = useRouter()
-  const [newYoutubeUrl, setNewYoutubeUrl] = useState('')
   const { toast } = useToast()
+  const [attendanceBranch, setAttendanceBranch] = useState('')
 
   const [filterDate, setFilterDate] = useState('')
   const [filterTitle, setFilterTitle] = useState('')
-  const [filterBranch, setFilterBranch] = useState('')
 
   const [currentPage, setCurrentPage] = useState(1)
   const recordsPerPage = 15
 
   useEffect(() => {
-    const isAdmin = localStorage.getItem('adminAuth')
-    if (!isAdmin) {
-      router.push('/admin/login')
+    const isAuth = localStorage.getItem('attendanceAuth')
+    const branch = localStorage.getItem('attendanceBranch')
+    if (!isAuth || !branch) {
+      router.push('/attendance/login')
       return
     }
+    setAttendanceBranch(branch)
   }, [router])
 
   const { data: attendanceRecords = [], isLoading: isLoadingRecords, isError, error } = useQuery<AttendanceRecord[]>({
-    queryKey: ['/api/attendance/records', 'all'],
+    queryKey: ['/api/attendance/records', attendanceBranch],
     queryFn: async () => {
-      const res = await fetch('/api/attendance/records')
+      if (!attendanceBranch) return []
+      const res = await fetch(`/api/attendance/records?branch=${encodeURIComponent(attendanceBranch)}`)
       if (!res.ok) throw new Error('Failed to fetch records')
       return res.json()
     },
+    enabled: !!attendanceBranch,
     refetchInterval: 30000,
   })
 
@@ -69,8 +70,7 @@ export default function AdminDashboard() {
     const recordDate = format(new Date(record.startTime), 'yyyy-MM-dd')
     const dateMatch = filterDate ? recordDate === filterDate : true
     const titleMatch = filterTitle ? record.streamTitle === filterTitle : true
-    const branchMatch = filterBranch && filterBranch !== 'all' ? record.branch === filterBranch : true
-    return dateMatch && titleMatch && branchMatch
+    return dateMatch && titleMatch
   })
 
   const totalPages = Math.ceil(filteredRecords.length / recordsPerPage)
@@ -80,7 +80,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [filterDate, filterTitle, filterBranch])
+  }, [filterDate, filterTitle])
 
   const toggleAttendanceMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
@@ -102,56 +102,9 @@ export default function AdminDashboard() {
     },
   })
 
-  const updateUrlMutation = useMutation({
-    mutationFn: async (url: string) => {
-      let embedUrl = url
-      
-      if (url.includes('youtube.com/live/')) {
-        const videoId = url.split('/live/')[1].split('?')[0]
-        embedUrl = `https://www.youtube.com/embed/${videoId}`
-      }
-      else if (url.includes('youtube.com/watch?v=')) {
-        const videoId = url.split('v=')[1].split('&')[0]
-        embedUrl = `https://www.youtube.com/embed/${videoId}`
-      }
-      else if (url.includes('youtu.be/')) {
-        const videoId = url.split('youtu.be/')[1].split('?')[0]
-        embedUrl = `https://www.youtube.com/embed/${videoId}`
-      }
-      else if (url.includes('youtube.com/embed/')) {
-        embedUrl = url
-      }
-      else if (!url.includes('http')) {
-        embedUrl = `https://www.youtube.com/embed/${url}`
-      }
-      
-      return apiRequest('PUT', '/api/stream/settings', { url: embedUrl })
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/stream/settings'] })
-      toast({
-        title: 'Success',
-        description: 'YouTube link updated successfully!',
-      })
-      setNewYoutubeUrl('')
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to update YouTube link.',
-        variant: 'destructive',
-      })
-    },
-  })
-
-  const handleUpdateUrl = () => {
-    if (newYoutubeUrl) {
-      updateUrlMutation.mutate(newYoutubeUrl)
-    }
-  }
-
   const handleLogout = () => {
-    localStorage.removeItem('adminAuth')
+    localStorage.removeItem('attendanceAuth')
+    localStorage.removeItem('attendanceBranch')
     router.push('/')
   }
 
@@ -177,7 +130,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text(filterBranch && filterBranch !== 'all' ? `${filterBranch} Branch` : 'All Branches', 50, 26)
+      doc.text(`${attendanceBranch} Branch`, 50, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -197,19 +150,18 @@ export default function AdminDashboard() {
       const tableData = recordsToExport.map((record, index) => [
         (index + 1).toString(),
         record.name,
-        record.branch,
         record.streamTitle,
         format(new Date(record.startTime), 'MMM dd, yyyy'),
       ])
 
       autoTable(doc, {
-        head: [['S/N', 'Name', 'Branch', 'Service', 'Date']],
+        head: [['S/N', 'Name', 'Service', 'Date']],
         body: tableData,
         startY: 65,
         tableWidth: 'auto',
         styles: { 
-          fontSize: 9,
-          cellPadding: 3,
+          fontSize: 10,
+          cellPadding: 4,
         },
         headStyles: { 
           fillColor: [13, 71, 161],
@@ -221,11 +173,10 @@ export default function AdminDashboard() {
           fillColor: [245, 245, 245],
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 15 },
-          1: { cellWidth: 50 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 50 },
-          4: { halign: 'center', cellWidth: 30 },
+          0: { halign: 'center', cellWidth: 20 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 60 },
+          3: { halign: 'center', cellWidth: 35 },
         },
       })
 
@@ -241,13 +192,13 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          `Deeper Life Bible Church`,
+          `Deeper Life Bible Church - ${attendanceBranch} Branch`,
           14,
           doc.internal.pageSize.height - 10
         )
       }
 
-      doc.save(`DLBC-${filterBranch && filterBranch !== 'all' ? filterBranch : 'All-Branches'}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      doc.save(`DLBC-${attendanceBranch}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
 
       toast({
         title: 'Export successful',
@@ -266,7 +217,7 @@ export default function AdminDashboard() {
 
       doc.setFontSize(14)
       doc.setFont('helvetica', 'normal')
-      doc.text(filterBranch && filterBranch !== 'all' ? `${filterBranch} Branch` : 'All Branches', 14, 26)
+      doc.text(`${attendanceBranch} Branch`, 14, 26)
 
       doc.setFontSize(16)
       doc.setFont('helvetica', 'bold')
@@ -281,19 +232,18 @@ export default function AdminDashboard() {
       const tableData = recordsToExport.map((record, index) => [
         (index + 1).toString(),
         record.name,
-        record.branch,
         record.streamTitle,
         format(new Date(record.startTime), 'MMM dd, yyyy'),
       ])
 
       autoTable(doc, {
-        head: [['S/N', 'Name', 'Branch', 'Service', 'Date']],
+        head: [['S/N', 'Name', 'Service', 'Date']],
         body: tableData,
         startY: 65,
         tableWidth: 'auto',
         styles: { 
-          fontSize: 9,
-          cellPadding: 3,
+          fontSize: 10,
+          cellPadding: 4,
         },
         headStyles: { 
           fillColor: [13, 71, 161],
@@ -305,11 +255,10 @@ export default function AdminDashboard() {
           fillColor: [245, 245, 245],
         },
         columnStyles: {
-          0: { halign: 'center', cellWidth: 15 },
-          1: { cellWidth: 50 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 50 },
-          4: { halign: 'center', cellWidth: 30 },
+          0: { halign: 'center', cellWidth: 20 },
+          1: { cellWidth: 70 },
+          2: { cellWidth: 60 },
+          3: { halign: 'center', cellWidth: 35 },
         },
       })
 
@@ -325,13 +274,13 @@ export default function AdminDashboard() {
           { align: 'center' }
         )
         doc.text(
-          `Deeper Life Bible Church`,
+          `Deeper Life Bible Church - ${attendanceBranch} Branch`,
           14,
           doc.internal.pageSize.height - 10
         )
       }
 
-      doc.save(`DLBC-${filterBranch && filterBranch !== 'all' ? filterBranch : 'All-Branches'}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
+      doc.save(`DLBC-${attendanceBranch}-Attendance-${format(new Date(), 'yyyy-MM-dd')}.pdf`)
 
       toast({
         title: 'Export successful',
@@ -345,8 +294,8 @@ export default function AdminDashboard() {
       <div className="border-b">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-wrap justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold" data-testid="text-dashboard-title">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Deeper Life Bible Church</p>
+            <h1 className="text-2xl font-bold" data-testid="text-attendance-title">Attendance Record</h1>
+            <p className="text-sm text-muted-foreground">Deeper Life Bible Church - {attendanceBranch} Branch</p>
           </div>
           <Button
             data-testid="button-logout"
@@ -361,12 +310,9 @@ export default function AdminDashboard() {
       <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Youtube className="text-red-600" data-testid="icon-youtube" />
-              Stream Settings
-            </CardTitle>
+            <CardTitle>Attendance Control</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
               <div>
                 <h3 className="font-semibold">Attendance Tracking</h3>
@@ -387,36 +333,6 @@ export default function AdminDashboard() {
                     : 'Start Attendance'}
               </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="youtube-url">YouTube URL (any format)</Label>
-              <Input
-                id="youtube-url"
-                data-testid="input-youtube-url"
-                type="text"
-                value={newYoutubeUrl}
-                onChange={(e) => setNewYoutubeUrl(e.target.value)}
-                placeholder="https://youtube.com/watch?v=... or CHANNEL_ID/live"
-              />
-              <p className="text-sm text-muted-foreground">
-                Supports: youtube.com/watch?v=, youtu.be/, CHANNEL_ID/live, or embed URLs
-              </p>
-            </div>
-            <Button
-              data-testid="button-update-url"
-              onClick={handleUpdateUrl}
-              disabled={!newYoutubeUrl || updateUrlMutation.isPending}
-            >
-              {updateUrlMutation.isPending ? 'Updating...' : 'Update Stream URL'}
-            </Button>
-            {streamSettings ? (
-              <p className="text-sm text-muted-foreground" data-testid="text-current-url">
-                Current URL: <code className="bg-muted px-2 py-1 rounded-sm text-xs">{streamSettings.youtubeUrl}</code>
-              </p>
-            ) : (
-              <p className="text-sm text-amber-600 font-medium" data-testid="text-no-url">
-                No stream URL configured yet. Please set one above.
-              </p>
-            )}
           </CardContent>
         </Card>
 
@@ -425,7 +341,7 @@ export default function AdminDashboard() {
             <CardTitle className="flex items-center gap-2">
               <Users className="text-primary" data-testid="icon-users" />
               <span data-testid="text-records-count">
-                All Attendance Records ({attendanceRecords.length})
+                Attendance Records ({attendanceRecords.length})
               </span>
             </CardTitle>
           </CardHeader>
@@ -446,23 +362,7 @@ export default function AdminDashboard() {
             ) : (
               <>
                 <div className="mb-4 flex flex-wrap gap-4 items-end">
-                  <div className="flex-1 min-w-[150px]">
-                    <Label htmlFor="filter-branch">Filter by Branch</Label>
-                    <Select value={filterBranch} onValueChange={setFilterBranch}>
-                      <SelectTrigger id="filter-branch" className="mt-1">
-                        <SelectValue placeholder="All Branches" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Branches</SelectItem>
-                        {BRANCHES.map((b) => (
-                          <SelectItem key={b} value={b}>
-                            {b}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 min-w-[150px]">
+                  <div className="flex-1 min-w-[200px]">
                     <Label htmlFor="filter-date">Filter by Date</Label>
                     <Input
                       id="filter-date"
@@ -472,7 +372,7 @@ export default function AdminDashboard() {
                       className="mt-1"
                     />
                   </div>
-                  <div className="flex-1 min-w-[150px]">
+                  <div className="flex-1 min-w-[200px]">
                     <Label htmlFor="filter-title">Filter by Service</Label>
                     <select
                       id="filter-title"
@@ -490,7 +390,6 @@ export default function AdminDashboard() {
                     onClick={() => {
                       setFilterDate('')
                       setFilterTitle('')
-                      setFilterBranch('')
                     }}
                     variant="outline"
                   >
@@ -508,8 +407,8 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 <div className="mb-2 text-sm text-muted-foreground">
-                  Showing {startIndex + 1}-{Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} {filterDate || filterTitle || filterBranch ? 'filtered' : ''} records
-                  {(filterDate || filterTitle || filterBranch) && ` (${attendanceRecords.length} total)`}
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredRecords.length)} of {filteredRecords.length} {filterDate || filterTitle ? 'filtered' : ''} records
+                  {(filterDate || filterTitle) && ` (${attendanceRecords.length} total)`}
                 </div>
                 <div className="border rounded-lg overflow-auto">
                   <Table>
@@ -517,7 +416,6 @@ export default function AdminDashboard() {
                       <TableRow>
                         <TableHead className="w-16">S/N</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead>Branch</TableHead>
                         <TableHead>Service</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Start Time</TableHead>
@@ -529,7 +427,6 @@ export default function AdminDashboard() {
                         <TableRow key={record.id} data-testid={`row-attendance-${record.id}`}>
                           <TableCell className="font-medium">{startIndex + index + 1}</TableCell>
                           <TableCell className="font-medium">{record.name}</TableCell>
-                          <TableCell>{record.branch}</TableCell>
                           <TableCell className="font-medium">{record.streamTitle}</TableCell>
                           <TableCell>
                             {format(new Date(record.startTime), 'MMM dd, yyyy')}

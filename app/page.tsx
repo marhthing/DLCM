@@ -93,10 +93,26 @@ export default function LoginPage() {
                 Join Live Stream
               </Button>
             </div>
-            <div className="text-center">
-              <Button variant="ghost" onClick={() => router.push('/admin/login')} className="text-sm" data-testid="button-admin-access">
-                Admin Access
-              </Button>
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              <p className="text-xs text-center text-muted-foreground mb-1">Staff Access</p>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/attendance/login')} 
+                  className="flex-1 text-sm" 
+                  data-testid="button-attendance-access"
+                >
+                  Attendance Record
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => router.push('/admin/login')} 
+                  className="flex-1 text-sm" 
+                  data-testid="button-admin-access"
+                >
+                  Admin
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

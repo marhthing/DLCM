@@ -6,12 +6,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { useMutation } from '@tanstack/react-query'
 import { apiRequest } from '@/lib/queryClient'
+import { BRANCHES } from '@/shared/schema'
 
-export default function AdminLogin() {
+export default function AttendanceLogin() {
   const router = useRouter()
+  const [branch, setBranch] = useState('')
   const [password, setPassword] = useState('')
   const { toast } = useToast()
 
@@ -20,8 +23,9 @@ export default function AdminLogin() {
       return apiRequest('POST', '/api/admin/login', { password })
     },
     onSuccess: () => {
-      localStorage.setItem('adminAuth', 'true')
-      router.push('/admin/dashboard')
+      localStorage.setItem('attendanceAuth', 'true')
+      localStorage.setItem('attendanceBranch', branch)
+      router.push('/attendance/dashboard')
     },
     onError: () => {
       toast({
@@ -33,7 +37,7 @@ export default function AdminLogin() {
   })
 
   const handleLogin = () => {
-    if (password) {
+    if (password && branch) {
       loginMutation.mutate(password)
     }
   }
@@ -54,34 +58,49 @@ export default function AdminLogin() {
             />
           </div>
           <div>
-            <CardTitle className="text-3xl font-bold mb-2">Admin Access</CardTitle>
+            <CardTitle className="text-3xl font-bold mb-2">Attendance Record</CardTitle>
             <CardDescription className="text-base font-medium">
               Deeper Life Bible Church
             </CardDescription>
             <CardDescription className="text-sm mt-2">
-              Enter the admin password to access stream settings and all attendance records
+              Login to manage attendance for your branch
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
             <div className="space-y-2">
+              <Label htmlFor="branch">Select Your Branch</Label>
+              <Select value={branch} onValueChange={setBranch}>
+                <SelectTrigger id="branch" data-testid="select-attendance-branch">
+                  <SelectValue placeholder="Choose your branch" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BRANCHES.map((b) => (
+                    <SelectItem key={b} value={b} data-testid={`option-attendance-branch-${b}`}>
+                      {b}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
-                data-testid="input-admin-password"
+                data-testid="input-attendance-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
+                placeholder="Enter password"
                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
               />
             </div>
             <Button
-              data-testid="button-admin-login"
+              data-testid="button-attendance-login"
               onClick={handleLogin}
               className="w-full"
-              disabled={!password || loginMutation.isPending}
+              disabled={!password || !branch || loginMutation.isPending}
             >
               {loginMutation.isPending ? 'Logging in...' : 'Login'}
             </Button>
