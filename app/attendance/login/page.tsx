@@ -44,7 +44,7 @@ export default function AttendanceLogin() {
       if (password.toLowerCase() !== expectedPassword) {
         toast({
           title: 'Login Failed',
-          description: `Password must match your selected branch. Use: ${branch.toLowerCase()}record`,
+          description: 'Incorrect password. Please try again.',
           variant: 'destructive',
         })
         return
