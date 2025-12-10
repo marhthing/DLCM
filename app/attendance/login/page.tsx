@@ -8,8 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { useMutation } from '@tanstack/react-query'
-import { apiRequest } from '@/lib/queryClient'
 import { BRANCHES } from '@/shared/schema'
 
 export default function AttendanceLogin() {
@@ -17,24 +15,6 @@ export default function AttendanceLogin() {
   const [branch, setBranch] = useState('')
   const [password, setPassword] = useState('')
   const { toast } = useToast()
-
-  const loginMutation = useMutation({
-    mutationFn: async (password: string) => {
-      return apiRequest('POST', '/api/admin/login', { password })
-    },
-    onSuccess: () => {
-      localStorage.setItem('attendanceAuth', 'true')
-      localStorage.setItem('attendanceBranch', branch)
-      router.push('/attendance/dashboard')
-    },
-    onError: () => {
-      toast({
-        title: 'Login Failed',
-        description: 'Incorrect password. Please try again.',
-        variant: 'destructive',
-      })
-    },
-  })
 
   const handleLogin = () => {
     if (password && branch) {
@@ -50,7 +30,10 @@ export default function AttendanceLogin() {
         return
       }
       
-      loginMutation.mutate(password)
+      // Password is correct, proceed with login
+      localStorage.setItem('attendanceAuth', 'true')
+      localStorage.setItem('attendanceBranch', branch)
+      router.push('/attendance/dashboard')
     }
   }
 
@@ -112,9 +95,9 @@ export default function AttendanceLogin() {
               data-testid="button-attendance-login"
               onClick={handleLogin}
               className="w-full"
-              disabled={!password || !branch || loginMutation.isPending}
+              disabled={!password || !branch}
             >
-              {loginMutation.isPending ? 'Logging in...' : 'Login'}
+              Login
             </Button>
           </div>
           <div className="text-center">
