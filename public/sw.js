@@ -1,10 +1,6 @@
 
-const CACHE_NAME = 'dlbc-streaming-v4';
+const CACHE_NAME = 'dlbc-streaming-v5';
 const urlsToCache = [
-  '/',
-  '/stream',
-  '/admin/login',
-  '/admin/dashboard',
   '/church-logo.jpg',
   '/manifest.json'
 ];
@@ -30,7 +26,27 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // For non-API requests, use cache-first strategy
+  // For HTML pages, use network-first strategy
+  if (event.request.mode === 'navigate' || event.request.headers.get('accept')?.includes('text/html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          // Cache the new version
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if network fails
+          return caches.match(event.request);
+        })
+    );
+    return;
+  }
+  
+  // For static assets (images, fonts, etc.), use cache-first
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
