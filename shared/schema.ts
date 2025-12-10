@@ -65,9 +65,8 @@ export const viewerSessionSchema = z.object({
 export const BRANCHES = [
   "Pontypridd",
   "Cardiff",
-  "Swansea", 
   "Newport",
-  "Bristol"
+  "Swansea"
 ] as const;
 
 export type Branch = typeof BRANCHES[number];
