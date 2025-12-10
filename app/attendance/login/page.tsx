@@ -38,6 +38,18 @@ export default function AttendanceLogin() {
 
   const handleLogin = () => {
     if (password && branch) {
+      // Validate that password matches branch format: {branchname}record
+      const expectedPassword = `${branch.toLowerCase()}record`
+      
+      if (password.toLowerCase() !== expectedPassword) {
+        toast({
+          title: 'Login Failed',
+          description: `Password must match your selected branch. Use: ${branch.toLowerCase()}record`,
+          variant: 'destructive',
+        })
+        return
+      }
+      
       loginMutation.mutate(password)
     }
   }
