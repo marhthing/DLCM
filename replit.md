@@ -12,11 +12,14 @@ A Next.js web application that allows church members to watch live-streamed serv
 Production-ready for Vercel deployment. Successfully migrated from Express to Next.js App Router.
 
 ## Recent Changes (December 11, 2025)
-- **LATEST**: Added YouTube API integration for automatic live stream detection
-- **LATEST**: New admin settings: YouTube Channel ID, check day/time, auto-attendance duration
-- **LATEST**: When a live stream is detected, attendance automatically starts for configured duration (default 4 hours)
-- **LATEST**: Manual URL setting still available as fallback
-- **LATEST**: New cron endpoint `/api/cron/youtube-check` for scheduled live stream checks
+- **LATEST**: Check Live Now button now checks immediately without schedule restrictions
+- **LATEST**: Added check interval setting for auto-detect (1, 3, 5, 10, 15, or 30 minutes) to manage API quota
+- **LATEST**: Cron endpoint now respects check interval and throttles API calls accordingly
+- Added YouTube API integration for automatic live stream detection
+- New admin settings: YouTube Channel ID, check day/time, auto-attendance duration, check interval
+- When a live stream is detected, attendance automatically starts for configured duration (default 4 hours)
+- Manual URL setting still available as fallback
+- New cron endpoint `/api/cron/youtube-check` for scheduled live stream checks
 
 ## Previous Changes (December 10, 2025)
 - Separated Stream Settings from Attendance functionality
