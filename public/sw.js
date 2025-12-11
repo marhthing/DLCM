@@ -1,16 +1,22 @@
-
-const CACHE_NAME = 'dlbc-streaming-v5';
+const CACHE_NAME = 'dlbc-streaming-v6';
 const urlsToCache = [
   '/church-logo.jpg',
   '/manifest.json'
 ];
+
+// Helper to check if a request is cacheable
+function isCacheableRequest(request) {
+  const url = new URL(request.url);
+  // Only cache http and https schemes - ignore chrome-extension, etc.
+  return url.protocol === 'http:' || url.protocol === 'https:';
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
         return cache.addAll(urlsToCache).catch((err) => {
-          // console.log('Cache addAll error:', err);
+          console.log('Cache addAll error (non-critical):', err);
         });
       })
       .then(() => self.skipWaiting())
@@ -18,6 +24,11 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Skip non-cacheable requests (like chrome-extension://)
+  if (!isCacheableRequest(event.request)) {
+    return;
+  }
+
   const url = new URL(event.request.url);
   
   // Never cache API requests - always fetch from network
@@ -32,10 +43,12 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .then((response) => {
           // Cache the new version
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
           return response;
         })
         .catch(() => {
@@ -54,6 +67,7 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         return fetch(event.request).then((response) => {
+          // Only cache valid responses from our origin
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
@@ -73,10 +87,18 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => self.clients.claim())
   );
+});
+
+// Listen for messages from the main app to trigger updates
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
