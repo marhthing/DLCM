@@ -11,11 +11,18 @@ A Next.js web application that allows church members to watch live-streamed serv
 ## Current State
 Production-ready for Vercel deployment. Successfully migrated from Express to Next.js App Router.
 
-## Recent Changes (December 10, 2025)
-- **LATEST**: Separated Stream Settings from Attendance functionality
-- **LATEST**: Created new Attendance Record section for branch-specific attendance management
-- **LATEST**: Admin section now shows Stream Settings + combined attendance from all branches with branch filter
-- **LATEST**: Login page now has two buttons: "Attendance Record" and "Admin"
+## Recent Changes (December 11, 2025)
+- **LATEST**: Added YouTube API integration for automatic live stream detection
+- **LATEST**: New admin settings: YouTube Channel ID, check day/time, auto-attendance duration
+- **LATEST**: When a live stream is detected, attendance automatically starts for configured duration (default 4 hours)
+- **LATEST**: Manual URL setting still available as fallback
+- **LATEST**: New cron endpoint `/api/cron/youtube-check` for scheduled live stream checks
+
+## Previous Changes (December 10, 2025)
+- Separated Stream Settings from Attendance functionality
+- Created new Attendance Record section for branch-specific attendance management
+- Admin section now shows Stream Settings + combined attendance from all branches with branch filter
+- Login page now has two buttons: "Attendance Record" and "Admin"
 
 ## Previous Changes (November 24, 2025)
 - Migrated from Express backend to Next.js App Router for Vercel deployment
@@ -47,16 +54,19 @@ Production-ready for Vercel deployment. Successfully migrated from Express to Ne
 - **Admin Dashboard** (`app/admin/dashboard/page.tsx`) - Stream Settings, start/stop attendance, and combined attendance records from all branches with branch filter
 
 ### Backend (Next.js API Routes)
-- **GET `/api/stream/settings`** - Fetch current YouTube URL
-- **PUT `/api/stream/settings`** - Update YouTube URL (admin)
+- **GET `/api/stream/settings`** - Fetch current stream settings
+- **PUT `/api/stream/settings`** - Update stream settings including YouTube API config (admin)
 - **GET `/api/attendance/records`** - Get all attendance records (admin)
 - **POST `/api/attendance/heartbeat`** - Record user attendance heartbeat
 - **GET `/api/attendance/active-count`** - Get count of active viewers
 - **POST `/api/admin/login`** - Authenticate admin user
+- **POST `/api/youtube/check-live`** - Manually trigger live stream check
+- **GET `/api/youtube/check-live`** - Get YouTube API settings and check auto-stop
+- **GET `/api/cron/youtube-check`** - Cron endpoint for scheduled live stream detection
 
 ### Data Models
 - **AttendanceRecord**: id, name, email, streamSessionId, startTime, endTime, lastSeenAt, durationSeconds, timestamp
-- **StreamSettings**: youtubeUrl, updatedAt
+- **StreamSettings**: youtubeUrl, isAttendanceActive, updatedAt, youtubeChannelId, checkDay, checkStartTime, checkEndTime, autoAttendanceDurationHours, lastLiveCheckDate, autoDetectedUrl, attendanceAutoStopAt
 - **ViewerSession**: name, email, startTime, lastStreamSessionId (stored in localStorage)
 
 ### Storage
@@ -121,3 +131,4 @@ Production-ready for Vercel deployment. Successfully migrated from Express to Ne
 ## Environment Variables Required
 - `GOOGLE_SPREADSHEET_ID`: ID of the Google Sheet for attendance data (required for production)
 - `ADMIN_PASSWORD`: Admin password for dashboard access (defaults to "admin123" if not set - **MUST be set in production**)
+- `YOUTUBE_API_KEY`: YouTube Data API v3 key for live stream detection (optional - only needed for auto-detection feature)
