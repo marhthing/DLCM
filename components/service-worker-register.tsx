@@ -4,23 +4,37 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { RefreshCw } from 'lucide-react'
 
+const APP_VERSION = '6'
+
 export default function ServiceWorkerRegister() {
   const [showUpdateBanner, setShowUpdateBanner] = useState(false)
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null)
+  const [isIOS, setIsIOS] = useState(false)
 
   useEffect(() => {
+    // Detect iOS
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    setIsIOS(iOS)
+
+    // iOS fallback: check version in localStorage
+    if (iOS) {
+      const savedVersion = localStorage.getItem('app-version')
+      if (savedVersion && savedVersion !== APP_VERSION) {
+        setShowUpdateBanner(true)
+      }
+      localStorage.setItem('app-version', APP_VERSION)
+    }
+
+    // Standard service worker update check
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then((registration) => {
-        // Check for updates once when app opens
         registration.update()
 
-        // Check for waiting worker (update ready)
         if (registration.waiting) {
           setWaitingWorker(registration.waiting)
           setShowUpdateBanner(true)
         }
 
-        // Listen for new updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing
           if (newWorker) {
@@ -34,7 +48,6 @@ export default function ServiceWorkerRegister() {
         })
       })
 
-      // Handle controller change (when new SW takes over)
       let refreshing = false
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (!refreshing) {
@@ -46,8 +59,21 @@ export default function ServiceWorkerRegister() {
   }, [])
 
   const handleUpdate = () => {
-    if (waitingWorker) {
+    if (isIOS) {
+      // For iOS, clear caches and reload
+      if ('caches' in window) {
+        caches.keys().then((names) => {
+          names.forEach((name) => caches.delete(name))
+        }).finally(() => {
+          location.reload()
+        })
+      } else {
+        location.reload()
+      }
+    } else if (waitingWorker) {
       waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+    } else {
+      window.location.reload()
     }
   }
 
