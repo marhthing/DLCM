@@ -11,7 +11,7 @@ export default function ServiceWorkerRegister() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then((registration) => {
-        // Check for updates immediately
+        // Check for updates immediately on page load
         registration.update()
 
         // Check for waiting worker (update ready)
@@ -33,6 +33,24 @@ export default function ServiceWorkerRegister() {
             })
           }
         })
+
+        // Check for updates every 5 minutes while app is open
+        const updateInterval = setInterval(() => {
+          registration.update()
+        }, 5 * 60 * 1000)
+
+        // Also check when page becomes visible again (user switches back to app)
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            registration.update()
+          }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+          clearInterval(updateInterval)
+          document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
       })
 
       // Handle controller change (when new SW takes over)
