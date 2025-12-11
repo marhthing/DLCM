@@ -23,7 +23,7 @@ CREATE INDEX IF NOT EXISTS idx_attendance_branch ON attendance_records(branch);
 -- Create stream_settings table
 CREATE TABLE IF NOT EXISTS stream_settings (
   id UUID PRIMARY KEY,
-  youtube_url TEXT NOT NULL,
+  youtube_url TEXT DEFAULT '',
   is_attendance_active TEXT DEFAULT 'false',
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   youtube_channel_id TEXT DEFAULT '',
