@@ -34,9 +34,11 @@ export async function GET() {
     }
 
     const now = new Date()
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' })
-    const currentTime = now.toTimeString().slice(0, 5)
-    const todayDate = now.toISOString().split('T')[0]
+    // Use London timezone for all time checks
+    const londonOptions = { timeZone: 'Europe/London' }
+    const currentDay = now.toLocaleDateString('en-US', { ...londonOptions, weekday: 'long' })
+    const currentTime = now.toLocaleTimeString('en-GB', { ...londonOptions, hour: '2-digit', minute: '2-digit', hour12: false })
+    const todayDate = now.toLocaleDateString('en-CA', londonOptions) // en-CA gives YYYY-MM-DD format
 
     if (settings.lastLiveCheckDate === todayDate) {
       return NextResponse.json({

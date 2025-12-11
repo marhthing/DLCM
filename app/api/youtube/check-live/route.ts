@@ -30,7 +30,8 @@ export async function POST() {
     }
 
     const now = new Date()
-    const todayDate = now.toISOString().split('T')[0]
+    // Use London timezone for date tracking
+    const todayDate = now.toLocaleDateString('en-CA', { timeZone: 'Europe/London' }) // en-CA gives YYYY-MM-DD format
 
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${settings.youtubeChannelId}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`
     
