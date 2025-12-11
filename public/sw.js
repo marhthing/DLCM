@@ -10,7 +10,7 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => {
         return cache.addAll(urlsToCache).catch((err) => {
-          console.log('Cache addAll error:', err);
+          // console.log('Cache addAll error:', err);
         });
       })
       .then(() => self.skipWaiting())

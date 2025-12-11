@@ -196,7 +196,7 @@ export default function StreamPage() {
 
         // If stream went from live to recorded, stop heartbeat
         if (!newStatus && heartbeatIntervalRef.current) {
-          console.log('Stream is no longer live, stopping attendance tracking')
+          // console.log('Stream is no longer live, stopping attendance tracking')
           clearInterval(heartbeatIntervalRef.current)
           heartbeatIntervalRef.current = null
           sendFinalHeartbeat()
@@ -291,7 +291,7 @@ export default function StreamPage() {
 
     // Don't track attendance if admin has disabled it
     if (!isAttendanceActive) {
-      console.log('Attendance tracking is disabled by admin')
+      // console.log('Attendance tracking is disabled by admin')
       // Stop heartbeat if it was running
       if (heartbeatIntervalRef.current) {
         clearInterval(heartbeatIntervalRef.current)
@@ -302,13 +302,13 @@ export default function StreamPage() {
 
     // Don't track attendance if stream is not live
     if (liveStatusChecked && !isLiveStream) {
-      console.log('Stream is not live, skipping attendance tracking')
+      // console.log('Stream is not live, skipping attendance tracking')
       return
     }
 
     // Don't start another heartbeat if one is already running
     if (heartbeatIntervalRef.current) {
-      console.log('Heartbeat already running')
+      // console.log('Heartbeat already running')
       return
     }
 

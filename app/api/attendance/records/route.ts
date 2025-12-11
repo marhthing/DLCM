@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const branch = searchParams.get('branch')
     
-    console.log('Fetching attendance records...', branch ? `for branch: ${branch}` : 'all branches')
+    // console.log('Fetching attendance records...', branch ? `for branch: ${branch}` : 'all branches')
     
     let records
     if (branch) {
@@ -17,7 +17,7 @@ export async function GET(request: Request) {
       records = await storage.getAttendanceRecords()
     }
     
-    console.log(`Found ${records.length} attendance records`)
+    // console.log(`Found ${records.length} attendance records`)
     return NextResponse.json(records)
   } catch (error) {
     console.error('Get attendance records error:', error)

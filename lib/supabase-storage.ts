@@ -184,7 +184,7 @@ export class SupabaseStorage {
 
     // If no settings exist, create a default one
     if (error && error.code === 'PGRST116') {
-      console.log('No stream settings found, creating default...');
+      // console.log('No stream settings found, creating default...');
       const id = randomUUID();
       const now = new Date().toISOString();
       
