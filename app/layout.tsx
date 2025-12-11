@@ -38,10 +38,12 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/church-logo.jpg" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
       </head>
-      <body className={inter.className} suppressHydrationWarning>
+      <body className={`${inter.className} flex flex-col min-h-screen`} suppressHydrationWarning>
         <ServiceWorkerRegister />
         <Providers>
-          {children}
+          <main className="flex-1">
+            {children}
+          </main>
           <Footer />
         </Providers>
       </body>
