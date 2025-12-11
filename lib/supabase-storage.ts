@@ -195,6 +195,14 @@ export class SupabaseStorage {
           youtube_url: '',
           is_attendance_active: 'false',
           updated_at: now,
+          youtube_channel_id: '',
+          check_day: 'Monday',
+          check_start_time: '15:00',
+          check_end_time: '17:00',
+          auto_attendance_duration_hours: 4,
+          last_live_check_date: '',
+          auto_detected_url: '',
+          attendance_auto_stop_at: null,
         })
         .select()
         .single();
@@ -204,12 +212,7 @@ export class SupabaseStorage {
         return undefined;
       }
 
-      return {
-        id: newData.id,
-        youtubeUrl: newData.youtube_url,
-        isAttendanceActive: newData.is_attendance_active || 'false',
-        updatedAt: newData.updated_at,
-      };
+      return this.mapStreamSettings(newData);
     }
 
     if (error) {
@@ -221,27 +224,49 @@ export class SupabaseStorage {
       return undefined;
     }
 
+    return this.mapStreamSettings(data);
+  }
+
+  private mapStreamSettings(data: any): StreamSettings {
     return {
       id: data.id,
-      youtubeUrl: data.youtube_url,
+      youtubeUrl: data.youtube_url || '',
       isAttendanceActive: data.is_attendance_active || 'false',
       updatedAt: data.updated_at,
+      youtubeChannelId: data.youtube_channel_id || '',
+      checkDay: data.check_day || 'Monday',
+      checkStartTime: data.check_start_time || '15:00',
+      checkEndTime: data.check_end_time || '17:00',
+      autoAttendanceDurationHours: data.auto_attendance_duration_hours || 4,
+      lastLiveCheckDate: data.last_live_check_date || '',
+      autoDetectedUrl: data.auto_detected_url || '',
+      attendanceAutoStopAt: data.attendance_auto_stop_at || null,
     };
   }
 
-  async toggleAttendance(isActive: boolean): Promise<StreamSettings | undefined> {
+  async toggleAttendance(isActive: boolean, autoStopAt?: string | null): Promise<StreamSettings | undefined> {
     const settings = await this.getStreamSettings();
 
     if (!settings) {
       return undefined;
     }
 
+    const updateData: any = {
+      is_attendance_active: isActive ? 'true' : 'false',
+      updated_at: new Date().toISOString(),
+    };
+
+    if (autoStopAt !== undefined) {
+      updateData.attendance_auto_stop_at = autoStopAt === '' || autoStopAt === null ? null : autoStopAt;
+    }
+    
+    if (!isActive) {
+      updateData.attendance_auto_stop_at = null;
+    }
+
     const { data, error } = await supabase
       .from('stream_settings')
-      .update({
-        is_attendance_active: isActive ? 'true' : 'false',
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', settings.id)
       .select()
       .single();
@@ -251,12 +276,7 @@ export class SupabaseStorage {
       return undefined;
     }
 
-    return {
-      id: data.id,
-      youtubeUrl: data.youtube_url,
-      isAttendanceActive: data.is_attendance_active || 'false',
-      updatedAt: data.updated_at,
-    };
+    return this.mapStreamSettings(data);
   }
 
   async updateStreamSettings(insertSettings: InsertStreamSettings): Promise<StreamSettings> {
@@ -271,13 +291,24 @@ export class SupabaseStorage {
         youtubeUrl = `https://www.youtube.com/embed/${videoId}`;
     }
 
+    const updateData: any = {
+      id,
+      updated_at: updatedAt,
+    };
+
+    if (youtubeUrl !== undefined) updateData.youtube_url = youtubeUrl;
+    if (insertSettings.youtubeChannelId !== undefined) updateData.youtube_channel_id = insertSettings.youtubeChannelId;
+    if (insertSettings.checkDay !== undefined) updateData.check_day = insertSettings.checkDay;
+    if (insertSettings.checkStartTime !== undefined) updateData.check_start_time = insertSettings.checkStartTime;
+    if (insertSettings.checkEndTime !== undefined) updateData.check_end_time = insertSettings.checkEndTime;
+    if (insertSettings.autoAttendanceDurationHours !== undefined) updateData.auto_attendance_duration_hours = insertSettings.autoAttendanceDurationHours;
+    if (insertSettings.lastLiveCheckDate !== undefined) updateData.last_live_check_date = insertSettings.lastLiveCheckDate;
+    if (insertSettings.autoDetectedUrl !== undefined) updateData.auto_detected_url = insertSettings.autoDetectedUrl;
+    if (insertSettings.attendanceAutoStopAt !== undefined) updateData.attendance_auto_stop_at = insertSettings.attendanceAutoStopAt;
+
     const { data, error } = await supabase
       .from('stream_settings')
-      .upsert({
-        id,
-        youtube_url: youtubeUrl, // Use the corrected URL
-        updated_at: updatedAt,
-      })
+      .upsert(updateData)
       .select()
       .single();
 
@@ -286,12 +317,7 @@ export class SupabaseStorage {
       throw new Error('Failed to update stream settings');
     }
 
-    return {
-      id: data.id,
-      youtubeUrl: data.youtube_url,
-      isAttendanceActive: data.is_attendance_active || 'false',
-      updatedAt: data.updated_at,
-    };
+    return this.mapStreamSettings(data);
   }
 
   async getActiveViewersCount(timeoutMs: number = 120000, branch?: string): Promise<number> {

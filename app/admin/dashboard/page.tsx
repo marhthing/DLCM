@@ -29,6 +29,8 @@ const formatDuration = (durationSeconds: number): string => {
   return `${minutes}m ${seconds}s`
 }
 
+const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
 export default function AdminDashboard() {
   const router = useRouter()
   const [newYoutubeUrl, setNewYoutubeUrl] = useState('')
@@ -37,6 +39,12 @@ export default function AdminDashboard() {
   const [filterDate, setFilterDate] = useState('')
   const [filterTitle, setFilterTitle] = useState('')
   const [filterBranch, setFilterBranch] = useState('')
+
+  const [channelId, setChannelId] = useState('')
+  const [checkDay, setCheckDay] = useState('Monday')
+  const [checkStartTime, setCheckStartTime] = useState('15:00')
+  const [checkEndTime, setCheckEndTime] = useState('17:00')
+  const [attendanceDuration, setAttendanceDuration] = useState(4)
 
   const [currentPage, setCurrentPage] = useState(1)
   const recordsPerPage = 15
@@ -62,6 +70,16 @@ export default function AdminDashboard() {
   const { data: streamSettings, refetch: refetchSettings } = useQuery<StreamSettings>({
     queryKey: ['/api/stream/settings'],
   })
+
+  useEffect(() => {
+    if (streamSettings) {
+      setChannelId(streamSettings.youtubeChannelId || '')
+      setCheckDay(streamSettings.checkDay || 'Monday')
+      setCheckStartTime(streamSettings.checkStartTime || '15:00')
+      setCheckEndTime(streamSettings.checkEndTime || '17:00')
+      setAttendanceDuration(streamSettings.autoAttendanceDurationHours || 4)
+    }
+  }, [streamSettings])
 
   const uniqueTitles = Array.from(new Set(attendanceRecords.map(record => record.streamTitle))).sort()
 
@@ -149,6 +167,64 @@ export default function AdminDashboard() {
       updateUrlMutation.mutate(newYoutubeUrl)
     }
   }
+
+  const updateYoutubeApiSettingsMutation = useMutation({
+    mutationFn: async (settings: {
+      youtubeChannelId?: string
+      checkDay?: string
+      checkStartTime?: string
+      checkEndTime?: string
+      autoAttendanceDurationHours?: number
+    }) => {
+      return apiRequest('PUT', '/api/stream/settings', settings)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stream/settings'] })
+      toast({
+        title: 'Success',
+        description: 'YouTube API settings updated!',
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update YouTube API settings.',
+        variant: 'destructive',
+      })
+    },
+  })
+
+  const handleSaveYoutubeApiSettings = () => {
+    updateYoutubeApiSettingsMutation.mutate({
+      youtubeChannelId: channelId,
+      checkDay,
+      checkStartTime,
+      checkEndTime,
+      autoAttendanceDurationHours: attendanceDuration,
+    })
+  }
+
+  const checkLiveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/youtube/check-live', { method: 'POST' })
+      if (!res.ok) throw new Error('Failed to check live status')
+      return res.json()
+    },
+    onSuccess: (data) => {
+      refetchSettings()
+      toast({
+        title: data.liveDetected === false ? 'No Live Stream' : data.skipped ? 'Check Skipped' : 'Live Stream Found!',
+        description: data.message,
+      })
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to check for live stream.',
+        variant: 'destructive',
+      })
+    },
+  })
 
   const handleLogout = () => {
     localStorage.removeItem('adminAuth')
@@ -416,6 +492,132 @@ export default function AdminDashboard() {
               <p className="text-sm text-amber-600 font-medium" data-testid="text-no-url">
                 No stream URL configured yet. Please set one above.
               </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Youtube className="text-red-600" data-testid="icon-youtube-api" />
+              YouTube API Auto-Detection
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure automatic live stream detection. The system will check for live streams on the scheduled day and time, then automatically start attendance tracking.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="channel-id">YouTube Channel ID</Label>
+                <Input
+                  id="channel-id"
+                  data-testid="input-channel-id"
+                  type="text"
+                  value={channelId}
+                  onChange={(e) => setChannelId(e.target.value)}
+                  placeholder="UCxxxxxxxxxxxxxxxx"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Find this in your YouTube channel URL
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="check-day">Check Day</Label>
+                <Select value={checkDay} onValueChange={setCheckDay}>
+                  <SelectTrigger id="check-day" data-testid="select-check-day">
+                    <SelectValue placeholder="Select day" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DAYS_OF_WEEK.map((day) => (
+                      <SelectItem key={day} value={day}>
+                        {day}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="check-start-time">Check Start Time</Label>
+                <Input
+                  id="check-start-time"
+                  data-testid="input-check-start-time"
+                  type="time"
+                  value={checkStartTime}
+                  onChange={(e) => setCheckStartTime(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="check-end-time">Check End Time</Label>
+                <Input
+                  id="check-end-time"
+                  data-testid="input-check-end-time"
+                  type="time"
+                  value={checkEndTime}
+                  onChange={(e) => setCheckEndTime(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="attendance-duration">Auto Attendance Duration (hours)</Label>
+                <Input
+                  id="attendance-duration"
+                  data-testid="input-attendance-duration"
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={attendanceDuration}
+                  onChange={(e) => setAttendanceDuration(Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Attendance will auto-stop after this many hours
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                data-testid="button-save-api-settings"
+                onClick={handleSaveYoutubeApiSettings}
+                disabled={updateYoutubeApiSettingsMutation.isPending}
+              >
+                {updateYoutubeApiSettingsMutation.isPending ? 'Saving...' : 'Save API Settings'}
+              </Button>
+              <Button
+                data-testid="button-check-live-now"
+                variant="outline"
+                onClick={() => checkLiveMutation.mutate()}
+                disabled={checkLiveMutation.isPending || !channelId}
+              >
+                {checkLiveMutation.isPending ? 'Checking...' : 'Check Live Now'}
+              </Button>
+            </div>
+
+            {streamSettings?.autoDetectedUrl && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">Last Auto-Detected Stream:</p>
+                <code className="text-xs break-all">{streamSettings.autoDetectedUrl}</code>
+                {streamSettings.lastLiveCheckDate && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Detected on: {streamSettings.lastLiveCheckDate}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {streamSettings?.attendanceAutoStopAt && streamSettings.isAttendanceActive === 'true' && (
+              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                  Attendance Auto-Stop Scheduled
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  Will stop at: {format(new Date(streamSettings.attendanceAutoStopAt), 'MMM dd, yyyy h:mm a')}
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -21,6 +21,14 @@ export const streamSettings = pgTable("stream_settings", {
   youtubeUrl: text("youtube_url").notNull(),
   isAttendanceActive: text("is_attendance_active").notNull().default("false"),
   updatedAt: text("updated_at").notNull(),
+  youtubeChannelId: text("youtube_channel_id").default(""),
+  checkDay: text("check_day").default("Monday"),
+  checkStartTime: text("check_start_time").default("15:00"),
+  checkEndTime: text("check_end_time").default("17:00"),
+  autoAttendanceDurationHours: integer("auto_attendance_duration_hours").default(4),
+  lastLiveCheckDate: text("last_live_check_date").default(""),
+  autoDetectedUrl: text("auto_detected_url").default(""),
+  attendanceAutoStopAt: text("attendance_auto_stop_at"),
 });
 
 export const insertAttendanceRecordSchema = z.object({
@@ -45,7 +53,15 @@ export const heartbeatAttendanceSchema = z.object({
 });
 
 export const insertStreamSettingsSchema = z.object({
-  youtubeUrl: z.string().min(1),
+  youtubeUrl: z.string().optional(),
+  youtubeChannelId: z.string().optional(),
+  checkDay: z.string().optional(),
+  checkStartTime: z.string().optional(),
+  checkEndTime: z.string().optional(),
+  autoAttendanceDurationHours: z.number().optional(),
+  lastLiveCheckDate: z.string().optional(),
+  autoDetectedUrl: z.string().optional(),
+  attendanceAutoStopAt: z.string().optional(),
 });
 
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;

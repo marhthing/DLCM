@@ -25,7 +25,15 @@ CREATE TABLE IF NOT EXISTS stream_settings (
   id UUID PRIMARY KEY,
   youtube_url TEXT NOT NULL,
   is_attendance_active TEXT DEFAULT 'false',
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  youtube_channel_id TEXT DEFAULT '',
+  check_day TEXT DEFAULT 'Monday',
+  check_start_time TEXT DEFAULT '15:00',
+  check_end_time TEXT DEFAULT '17:00',
+  auto_attendance_duration_hours INTEGER DEFAULT 4,
+  last_live_check_date TEXT DEFAULT '',
+  auto_detected_url TEXT DEFAULT '',
+  attendance_auto_stop_at TIMESTAMPTZ DEFAULT NULL
 );
 
 -- Enable Row Level Security (optional - remove if you want to disable)
@@ -45,3 +53,13 @@ ALTER TABLE attendance_records ADD COLUMN IF NOT EXISTS branch TEXT DEFAULT 'Pon
 -- Migration: Update unique constraint to include branch
 ALTER TABLE attendance_records DROP CONSTRAINT IF EXISTS attendance_records_email_stream_session_id_key;
 ALTER TABLE attendance_records ADD CONSTRAINT attendance_records_email_session_branch_key UNIQUE(email, stream_session_id, branch);
+
+-- Migration: Add YouTube API settings columns to stream_settings (if upgrading)
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS youtube_channel_id TEXT DEFAULT '';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS check_day TEXT DEFAULT 'Monday';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS check_start_time TEXT DEFAULT '15:00';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS check_end_time TEXT DEFAULT '17:00';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS auto_attendance_duration_hours INTEGER DEFAULT 4;
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS last_live_check_date TEXT DEFAULT '';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS auto_detected_url TEXT DEFAULT '';
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS attendance_auto_stop_at TIMESTAMPTZ DEFAULT NULL;
