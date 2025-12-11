@@ -29,6 +29,8 @@ export const streamSettings = pgTable("stream_settings", {
   lastLiveCheckDate: text("last_live_check_date").default(""),
   autoDetectedUrl: text("auto_detected_url").default(""),
   attendanceAutoStopAt: text("attendance_auto_stop_at"),
+  checkIntervalMinutes: integer("check_interval_minutes").default(5),
+  lastApiCheckTime: text("last_api_check_time"),
 });
 
 export const insertAttendanceRecordSchema = z.object({
@@ -62,6 +64,8 @@ export const insertStreamSettingsSchema = z.object({
   lastLiveCheckDate: z.string().optional(),
   autoDetectedUrl: z.string().optional(),
   attendanceAutoStopAt: z.string().optional(),
+  checkIntervalMinutes: z.number().optional(),
+  lastApiCheckTime: z.string().optional(),
 });
 
 export type AttendanceRecord = typeof attendanceRecords.$inferSelect;

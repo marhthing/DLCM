@@ -33,7 +33,9 @@ CREATE TABLE IF NOT EXISTS stream_settings (
   auto_attendance_duration_hours INTEGER DEFAULT 4,
   last_live_check_date TEXT DEFAULT '',
   auto_detected_url TEXT DEFAULT '',
-  attendance_auto_stop_at TIMESTAMPTZ DEFAULT NULL
+  attendance_auto_stop_at TIMESTAMPTZ DEFAULT NULL,
+  check_interval_minutes INTEGER DEFAULT 5,
+  last_api_check_time TIMESTAMPTZ DEFAULT NULL
 );
 
 -- Enable Row Level Security (optional - remove if you want to disable)
@@ -63,3 +65,5 @@ ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS auto_attendance_duration_ho
 ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS last_live_check_date TEXT DEFAULT '';
 ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS auto_detected_url TEXT DEFAULT '';
 ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS attendance_auto_stop_at TIMESTAMPTZ DEFAULT NULL;
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS check_interval_minutes INTEGER DEFAULT 5;
+ALTER TABLE stream_settings ADD COLUMN IF NOT EXISTS last_api_check_time TIMESTAMPTZ DEFAULT NULL;

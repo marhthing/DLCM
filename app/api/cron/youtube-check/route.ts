@@ -62,6 +62,26 @@ export async function GET() {
       })
     }
 
+    const checkIntervalMs = (settings.checkIntervalMinutes || 5) * 60 * 1000
+    if (settings.lastApiCheckTime) {
+      const lastCheck = new Date(settings.lastApiCheckTime)
+      const timeSinceLastCheck = now.getTime() - lastCheck.getTime()
+      
+      if (timeSinceLastCheck < checkIntervalMs) {
+        const nextCheckIn = Math.ceil((checkIntervalMs - timeSinceLastCheck) / 1000 / 60)
+        return NextResponse.json({
+          message: `Waiting for check interval. Next check in ${nextCheckIn} minute(s)`,
+          action: 'interval_wait',
+          lastApiCheckTime: settings.lastApiCheckTime,
+          checkIntervalMinutes: settings.checkIntervalMinutes
+        })
+      }
+    }
+
+    await storage.updateStreamSettings({
+      lastApiCheckTime: now.toISOString()
+    })
+
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${settings.youtubeChannelId}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`
     
     const response = await fetch(searchUrl)

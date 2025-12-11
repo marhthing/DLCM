@@ -203,6 +203,7 @@ export class SupabaseStorage {
           last_live_check_date: '',
           auto_detected_url: '',
           attendance_auto_stop_at: null,
+          check_interval_minutes: 5,
         })
         .select()
         .single();
@@ -241,6 +242,8 @@ export class SupabaseStorage {
       lastLiveCheckDate: data.last_live_check_date || '',
       autoDetectedUrl: data.auto_detected_url || '',
       attendanceAutoStopAt: data.attendance_auto_stop_at || null,
+      checkIntervalMinutes: data.check_interval_minutes || 5,
+      lastApiCheckTime: data.last_api_check_time || null,
     };
   }
 
@@ -305,6 +308,8 @@ export class SupabaseStorage {
     if (insertSettings.lastLiveCheckDate !== undefined) updateData.last_live_check_date = insertSettings.lastLiveCheckDate;
     if (insertSettings.autoDetectedUrl !== undefined) updateData.auto_detected_url = insertSettings.autoDetectedUrl;
     if (insertSettings.attendanceAutoStopAt !== undefined) updateData.attendance_auto_stop_at = insertSettings.attendanceAutoStopAt;
+    if (insertSettings.checkIntervalMinutes !== undefined) updateData.check_interval_minutes = insertSettings.checkIntervalMinutes;
+    if (insertSettings.lastApiCheckTime !== undefined) updateData.last_api_check_time = insertSettings.lastApiCheckTime;
 
     const { data, error } = await supabase
       .from('stream_settings')

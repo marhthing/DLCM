@@ -45,6 +45,7 @@ export default function AdminDashboard() {
   const [checkStartTime, setCheckStartTime] = useState('15:00')
   const [checkEndTime, setCheckEndTime] = useState('17:00')
   const [attendanceDuration, setAttendanceDuration] = useState(4)
+  const [checkIntervalMinutes, setCheckIntervalMinutes] = useState(5)
 
   const [currentPage, setCurrentPage] = useState(1)
   const recordsPerPage = 15
@@ -78,6 +79,7 @@ export default function AdminDashboard() {
       setCheckStartTime(streamSettings.checkStartTime || '15:00')
       setCheckEndTime(streamSettings.checkEndTime || '17:00')
       setAttendanceDuration(streamSettings.autoAttendanceDurationHours || 4)
+      setCheckIntervalMinutes(streamSettings.checkIntervalMinutes || 5)
     }
   }, [streamSettings])
 
@@ -175,6 +177,7 @@ export default function AdminDashboard() {
       checkStartTime?: string
       checkEndTime?: string
       autoAttendanceDurationHours?: number
+      checkIntervalMinutes?: number
     }) => {
       return apiRequest('PUT', '/api/stream/settings', settings)
     },
@@ -201,6 +204,7 @@ export default function AdminDashboard() {
       checkStartTime,
       checkEndTime,
       autoAttendanceDurationHours: attendanceDuration,
+      checkIntervalMinutes,
     })
   }
 
@@ -575,6 +579,29 @@ export default function AdminDashboard() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Attendance will auto-stop after this many hours
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="check-interval">Auto-Detect Check Interval (minutes)</Label>
+                <Select 
+                  value={checkIntervalMinutes.toString()} 
+                  onValueChange={(val) => setCheckIntervalMinutes(Number(val))}
+                >
+                  <SelectTrigger id="check-interval" data-testid="select-check-interval">
+                    <SelectValue placeholder="Select interval" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Every 1 minute</SelectItem>
+                    <SelectItem value="3">Every 3 minutes</SelectItem>
+                    <SelectItem value="5">Every 5 minutes</SelectItem>
+                    <SelectItem value="10">Every 10 minutes</SelectItem>
+                    <SelectItem value="15">Every 15 minutes</SelectItem>
+                    <SelectItem value="30">Every 30 minutes</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  How often to check for live streams during auto-detect time window (helps manage API quota)
                 </p>
               </div>
             </div>

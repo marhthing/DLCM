@@ -30,33 +30,7 @@ export async function POST() {
     }
 
     const now = new Date()
-    const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' })
-    const currentTime = now.toTimeString().slice(0, 5)
     const todayDate = now.toISOString().split('T')[0]
-
-    if (settings.lastLiveCheckDate === todayDate) {
-      return NextResponse.json({
-        message: 'Already checked for live stream today',
-        lastCheckDate: settings.lastLiveCheckDate,
-        skipped: true
-      })
-    }
-
-    if (currentDay !== settings.checkDay) {
-      return NextResponse.json({
-        message: `Not the scheduled check day. Current: ${currentDay}, Scheduled: ${settings.checkDay}`,
-        skipped: true
-      })
-    }
-
-    const checkStart = settings.checkStartTime || '15:00'
-    const checkEnd = settings.checkEndTime || '17:00'
-    if (currentTime < checkStart || currentTime > checkEnd) {
-      return NextResponse.json({
-        message: `Not within check time window. Current: ${currentTime}, Window: ${settings.checkStartTime} - ${settings.checkEndTime}`,
-        skipped: true
-      })
-    }
 
     const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${settings.youtubeChannelId}&eventType=live&type=video&key=${YOUTUBE_API_KEY}`
     
@@ -136,6 +110,7 @@ export async function GET() {
           checkStartTime: settings.checkStartTime,
           checkEndTime: settings.checkEndTime,
           autoAttendanceDurationHours: settings.autoAttendanceDurationHours,
+          checkIntervalMinutes: settings.checkIntervalMinutes,
           lastLiveCheckDate: settings.lastLiveCheckDate,
           autoDetectedUrl: settings.autoDetectedUrl,
           attendanceStopped: true,
@@ -151,6 +126,7 @@ export async function GET() {
       checkStartTime: settings.checkStartTime,
       checkEndTime: settings.checkEndTime,
       autoAttendanceDurationHours: settings.autoAttendanceDurationHours,
+      checkIntervalMinutes: settings.checkIntervalMinutes,
       lastLiveCheckDate: settings.lastLiveCheckDate,
       autoDetectedUrl: settings.autoDetectedUrl,
       attendanceAutoStopAt: settings.attendanceAutoStopAt,
